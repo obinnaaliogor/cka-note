@@ -1529,8 +1529,591 @@ They comm bw each using localhost.
 						
 						
 						
+
+						View Certificate Details::::
+						https://kubernetes.io/docs/tasks/administer-cluster/certificates/
 						
+						command:
+						  openssl req  -noout -text -in ./server.csr
+						  
+						  This will be dependent on how your cluster was setup.
+						  If you deployed your cluster the hardway then you will have to create the entire certificate by yourself.
+						  If the cluster was deployed using the kubeadm tool, kubeadm sets up the entire certificates for you as they run in pods.
+						  Its important to know this in other to determine where to look for the certificates.
+						  
+						  Viewing the kube-apiserver certificates...
+						  
+						  cat /etc/kubernetes/manifests/kube-apiserver.yaml
+						  
+						  Check the command option, it has the commands used to start the kube-apiserver.
+						  Identify the individual certificates used by the apiserver. View it and understand it in details...
+						  RUN:
+						  
+						  openssl X509  -in /etc/kubernetes/manifests/kube-apiserver.yaml -noout -text
+						  
+						  
+						  
+						  Toubleshooting:
+						  
+						  Inspect service logs:
+						  
+						  journalctl -u etcd-service -l ---> Use this to view system logs if you configured your certificate using native services.
+						  
+						  If your cluster is deployed using kubeadm tool.
+						  RUN:
+						  kubectl logs <pod-name>
+						  
+						  Sometimes if the kube-apiserver is down, the kubectl command will not work.
+						  You have to go one level down to troubleshoot using (docker ps -a or crictl ps -a) depending on the CNI installed in the cluster.
+						  docker container ls
+						  docker container logs <containerID>
+						  crictl logs <containerID>
+						  https://kubernetes.io/docs/tasks/debug/debug-cluster/crictl/#example-crictl-commands
+						  
+						  
+						  
+						  ISSUE:
+						  k get pods
+						  Error from server (Timeout): the server was unable to return a response in the time allotted, but may still be processing the request (get pods)
+						  
+						  PROBLEM:
+						  The kubectl command stopped working, someone modified the /etc/kubernetes/manifests/etcd.yaml file.
+						  
+						  the cert file was modified..
+						  
+						  ISSUE:
+
+						  controlplane ~ ➜  k get pods
+						  Get "https://controlplane:6443/api/v1/namespaces/default/pods?limit=500": dial tcp 192.23.158.9:6443: 
+						  connect: connection refused - error from a previous attempt: read tcp 192.23.158.9:43784->192.23.158.9:6443: read: connection reset by peer
+						  
+						  Solution:
+						  Run 
+						  crictl ps -a ---> check the exited container, the apiserver container and check the logs.
+						  crictl logs <containerid>
+						  
+						  LOGs output:
+
+						  "Type": 0,
+						  "Metadata": null
+						}. Err: connection error: desc = "transport: authentication handshake failed: tls: failed to verify certificate: x509: certificate signed by unknown authority"
+						E0927 22:58:45.113664       1 run.go:74] "command failed" err="context deadline exceeded"
+						  
+						 
+						  
+						  
+
 						
+						CERTIFICATE API:
+						Lets say as the only admin in the cluster, someone joins my organization. Iam tasked with granting the user access to the cluster.
+						I ask the user to generate a key using the openssl genrsa -out jane.key 2048
+						
+						The user also generates a certificate signing request, 
+						2. We Create a CSR.
+					    openssl req -new -key jane.key -subj "CN/=jane" -out jane.csr
+					     output jane.csr
+						 
+						 She then sends me this CSR, as the only one with access to the cluster where the CA KEY AND CA cert are i use these to sign the users CSR and sends it back the certificate to her
+						 for an access to the cluster. This certificate has a validity period, i keep rotating the certificate each time it expires by asking her to generate a new one and i sign it with the CA
+						 
+						 Each time a new user joins again, the process is repeated and when the number of users increases this becomes a tidious job..
+						 
+						 The Certificate API, allows us to automate the process of certificate approval and deny.
+						 It allows us to secure of CA servers which is a safe storage of the CAkey and CA cert used in signing the csr.
+						 There4 the CA server is nothing but a server where we safe store the CAkey and CA certificates.. Anyone with access to this server can create as many users as they want and with any permission they want.
+						 This is why we need to secure the CA server..
+						 
+						 Automating CERTIFICATE SIGNING:
+						 
+						 Kubernetes has a certificate API, with certificate api you can send csr to the CA server and all administrator will see this as pending csr in the cluster.
+						 
+						 Process: 
+						 The new user generates a set of keys, create a csr and send the csr to me the admin user.
+						 The admin user creates a CertificateSingingRequest object. In this CSR object, the details of the new users csr is enterred into it.
+						 Things like the encoded csr.
+						 
+						 Example:
+						 apiVersion: certificates.k8s.io/v1
+						 kind: CertificateSigningRequest
+						 metadata:
+						   name: jane-csr
+						 spec:
+						   request: <base64_encoded_csr>
+						   signerName: kubernetes.io/kube-apiserver-client
+						   usages:
+						   - client auth
+						   
+						   ---
+						   apiVersion: certificates.k8s.io/v1
+						   kind: CertificateSigningRequest
+						   metadata:
+						     name: jane-csr
+						   spec:
+						     request: <base64_encoded_csr>
+						     signerName: kubernetes.io/kube-apiserver-client
+						     usages:
+						     - client auth
+						   subject:
+						     commonName: jane
+						     organization:
+						     - system:masters
+						     - my-group
+						   
+						 
+						 
+						  Important: The admin user creates this using the kubectl commands, the requests can be reviewed, approved, deny using the kubectl commands.
+						  The certificate is then extracted and shared with the user for authenticating into the k8s cluster....
+						  
+						  
+						  HOW IS IT DONE?????
+						  
+						  1. user generates key:
+						  openssl genrsa -out jane.key 2048
+						  
+						  2. user creates a csr using openssl command
+						  openssl req -new -key jane.key -sub "/CN=jane" -out jane.csr
+						  
+						  She sends the csr to the admin user.
+						  
+						  3. The admin user creates a csr api object as shown below.
+						  
+ 						 apiVersion: certificates.k8s.io/v1
+ 						 kind: CertificateSigningRequest
+ 						 metadata:
+ 						   name: jane
+ 						 spec:
+ 						   request: <base64_encoded_csr>
+ 						   groups: <The group the user belongs to in linux eg system:masters or system:authenticated, theyre all list and should have ->
+ 						   usages:  ---> The use of the certificate, just for auth or gital signature or key encipherment. They all list and should have -, ?
+ 						   - client auth
+						
+				
+						https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#certificate-signing-requests
+						
+						Some points to note:
+
+						    usages has to be 'client auth'
+
+						    expirationSeconds could be made longer (i.e. 864000 for ten days) or shorter (i.e. 3600 for one hour)
+
+						    request is the base64 encoded value of the CSR file content. You can get the content using this command:
+							
+							cat jane.csr | base64 | tr -d "\n"
+							
+							
+						
+							Approve the CertificateSigningRequest
+
+							Use kubectl to create a CSR and approve it.
+
+							Get the list of CSRs:
+							
+							Commands:
+							kubectl get csr
+							
+
+							Approve the CSR:
+
+							kubectl certificate approve jane
+
+							Get the certificate
+
+							Retrieve the certificate from the CSR:
+
+							kubectl get csr/jane -o yaml
+							
+							Important:
+
+							The certificate value is in Base64-encoded format under status.certificate.
+							
+							Important:
+
+							Export the issued certificate from the CertificateSigningRequest.
+
+							kubectl get csr jane -o jsonpath='{.status.certificate}'| base64 -d > jane.crt
+							...
+							https://kubernetes.io/docs/tasks/administer-cluster/certificates/
+							
+							
+							WHO DOES ALL OF THESE FOR US???
+							All of the certificate signing operations are done by the kube-controller-manager.
+							It uses controllers like CSR approving CSR signing to do all of these for us.
+							
+							We know that for anyone to sign certificate, the need the CA server root certificate and key.
+							Does the controller manager have these keys?
+							
+							If you cat /etc/kubernetes/manifests/kube-controller-manager youll notice an option in the kube-controller-manager called 
+							--cluster-signing-cert-file=/etc/kubernetes/pki/ca.crt
+							--cluster-signing-key-file==/etc/kubernetes/pki/ca.key
+							
+							This options also enables the contoller-manager to sign/approve/deny a csr.. thus automating the certificate creation process.
+							
+							
+							LAB:
+							KubeConfig
+							
+							The admin user makes an api call using the curl command.
+							
+							curl https://my-kube-playgroud:6443/api/v1/pods \
+							--cert amdin.crt \
+							--key admin.key \
+							--cacert ca.key 
+							
+							HOW CAN YOU DO THIS USING THE kubectl utility?
+							
+							You can specify it using kubectl utility by running..
+							
+							kubectl get pods \
+							--server my-kube-playgroud:6443 \
+							--client-certificate amdin.crt \
+							--client-key admin.key \
+							--certificate-authority ca.key 
+							
+							Important:
+							Typing this each time you want to make an api call to the apiserver is a tidious tasks.
+							You then move this into a file called kubeconfig file..
+							
+							Create a file called config: 
+							
+							--server my-kube-playgroud:6443 \
+							--client-certificate amdin.crt \
+							--client-key admin.key \
+							--certificate-authority ca.key 
+						
+							In the users home directory which is $HOME/.kube/config
+							
+							This is the default place where the kubectl command line utility goes first to check for the kubeconfig file b4 performing your actions.
+							
+							Important:
+							You have not been specifying the cacert,key,cert options when calling the kubernetes api b/c theyre already in the .kube folder and kubectl check that folder and uses the file in there.
+							
+							The config file or the kubeconfig file is in a specific format:
+							
+							https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/
+							
+							Example:
+							Define clusters, users, and contexts
+							
+							kubeconfig or config file has 3 top fields that are required.
+							
+							clusters, contexts and users. This top fields are arrays or lists. 
+							
+							Suppose you have two clusters, one for development work and one for test work. In the development cluster, 
+							your frontend developers work in a namespace called frontend, and your storage developers work in a namespace called storage. In your test cluster, 
+							developers work in the default namespace, or they create auxiliary namespaces as they see fit. Access to the development cluster requires authentication by certificate.
+							 Access to the test cluster requires authentication by username and password.
+
+							Create a directory named config-exercise. In your config-exercise directory, create a file named config-demo with this content:
+							
+							
+
+							API Groups:
+							https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/
+							https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/
+							The kubernetes api are divided into 2 groups, the core api and the named api.
+							The core api inlcudes the pods,cm,secrets,volume,job,
+							For the named apis we have metrics,logs,healthz etc and theyre futher divided into deplyments which are resources etc
+							
+							
+							Example
+							
+							curl https://my-kube-playgroud:6443/api/v1/pods \
+							--cert amdin.crt \
+							--key admin.key \
+							--cacert ca.key 
+							
+							we are intrested in the /api and /v1 which is the /api and /version we also have /metrics /logs /healthz /apis
+							
+							The version api is for viewing the version of the cluster.
+							The metrics api is for the metrics of the cluster, the logs for integrating third party apps, the healthz is for the healthz.
+							
+							The apis responsible for the functionality of the cluster are the /api /apis
+							
+							Authorization:
+							So far we have talked about authentication..
+							What is authorization? 
+							Once you have been authenticated, what you can do defines authorization...
+							As an admin of the cluster, you're able to create and delete resources in the kubernetes cluster.
+							As the workloads grows, and new users join your org.. You wont give them the same access to yours, youll limit their access based on their tasks in the cluster.
+							SAY FOR A:
+							Developer, Bot or serviceaccount you will not grant these entities the access to delete nodes and modify certain resources in the cluster.
+							Authorization granted to them, defines the actions they can take in the k8s cluster. 
+							You might decide to limit them to a certain namespace as that is where their operation is needed.
+							Authorization enables you do all of these......
+							
+							Authorization Mechanism:
+							There are diff authorization mechanism, RBAC,ABAC, NODE, WEBHOOK.
+							RBAC: This is the more better way of granting authorization to users of your cluster.
+							With RBAC, you define a role for groups say "developers" and associate all the developer to that role.
+							Similarly, you can create a role for security users <security1> give it the right permission and associate the security users into it.
+							Important: Whenever theres a change to be made in the users permissions or role, we modify the role and the changes will reflect on all users..
+							 
+							You can also define a role to a specific user and add the user to that policy and each time you need to make a modification on the users permission, you update the policy and it ref
+							
+							DEEPDIVE INTO RBAC:
+							
+							We create a sample Role.
+							example:
+							
+							apiVersion: rbac.authorization.k8s.io/v1
+							kind: Role
+							metadata:
+							  namespace: default
+							  name: pod-reader
+							rules:
+							- apiGroups: [""] # "" indicates the core API group
+							  resources: ["pods"]
+							  verbs: ["create", "get", "watch", "list"]
+  							- apiGroups: [""] # "" indicates the core API group
+  							  resources: ["configmaps"]
+  							  verbs: ["create"]
+							  
+							  each rules has 3 sections: remember rules is a list.
+							  apiGroups --> name of apiGroups you want to grant it access granted to users/groups
+							  resources --> Resources you want to give access to eg ["pods"]
+							  verbs --> Actions to be permformed by the users/groups
+							  
+							  Important: 
+							  For the core apiGroups you leave the apiGroups section as empty/blank [""]
+							  For the named apiGroups provide the name of their apiGroups.
+							  
+							  We create the role, by running kubectl create -f <path-to-the-file>
+							  
+							  NEXT:
+							  We link the user/users to that role we have created.. To do this we create another object called RoleBinding...
+							  
+							  example: 
+							  apiVersion: rbac.authorization.k8s.io/v1
+							  # This role binding allows "jane" to read pods in the "default" namespace.
+							  # You need to already have a Role named "pod-reader" in that namespace.
+							  kind: RoleBinding
+							  metadata:
+							    name: read-pods
+							    namespace: default
+							  subjects:
+							  # You can specify more than one "subject"
+							  - kind: User
+							    name: dev-user # "name" is case sensitive
+							    apiGroup: rbac.authorization.k8s.io
+							  roleRef:
+							    # "roleRef" specifies the binding to a Role / ClusterRole
+							    kind: Role #this must be Role or ClusterRole
+							    name: pod-reader # this must match the name of the Role or ClusterRole you wish to bind to
+							    apiGroup: rbac.authorization.k8s.io
+							 
+								Important:
+								The subjects, is a list or array and its on the subject we provide the User the role we created is for, 
+								this is how u link the role to a user/group/sa. You can specify multiple users by using:
+								
+  							  subjects:
+  							  # You can specify more than one "subject"
+  							  - kind: User
+  							    name: first-user # "name" is case sensitive
+  							    apiGroup: rbac.authorization.k8s.io
+    						  - kind: User
+    							name: second-user # "name" is case sensitive
+    							apiGroup: rbac.authorization.k8s.io
+      						  - kind: User
+      							name: third-user # "name" is case sensitive
+      							apiGroup: rbac.authorization.k8s.io
+								
+								......................
+								Also in the kind section instead of User, you can provide Group, ServiceAccount
+								
+								Important:
+								the roleRef section is where we provide the details of the role we created earlier...
+								
+								Very Important:
+								The role and role binding objects falls under namespaces..
+								If you dont specify a namespace in the role and rolebinding objects, it will use the default namespace.
+								Which means the users associated to that role will only manage resources in the default namesapce.
+								Under the metadata section you can specify you can specify a namespace to grant the users access to a defined namespace.
+								
+								AS A USER IN THE CLUSTER HOW CAN I KNOW IF I CAN MANAGE CERTAIN RESOURCES???
+								----------------------------------------------------------------------------
+								
+								RUN:
+								
+								kubectl auth can-i create deployments
+								kubectl auth can-i create pods
+								kubectl auth can-i delete nodes
+								
+								This will tell you if you have the permission or not..
+							  
+								AS AN ADMIN, YOU WOULD LIKE TO TEST IF THE PERMISSION YOU GRANTED ON A USER IS OK WITHOUT AUTHENTICATING WITH THE USER CERT FILE,KEY AND CACERT.
+								
+								Lets say the user is dev-user.
+								
+								RUN:
+								
+							  kubectl auth can-i create deployments --as dev-user
+							  Youll receive no b/c dev-user does not have the permission.
+							  The permission is only to create pods
+							  
+							   kubectl auth can-i create pods --as dev-user
+							   output: yes
+							   
+							   kubectl auth can-i create pods --as dev-user --namespace test
+							   output: no, b/c the permission is for default namespace...
+							   
+							   
+							   NOTE: You limit users access to a specific resource in the cluster.
+							   Say we have orange pods and blue pods running in the cluster in the defined namespace and you want to limit a user access to a specific pod.
+							   In the role definition file, add a filed called.
+							   resourceNames under the rules and give the value or name of the pod or resource.
+							   eg.
+							   
+							   resourceNames: ["blue", "black"]
+							   
+							   
+							   ---sample role
+							   # Please edit the object below. Lines beginning with a '#' will be ignored,
+							   # and an empty file will abort the edit. If an error occurs while saving this file will be
+							   # reopened with the relevant failures.
+							   #
+							   apiVersion: rbac.authorization.k8s.io/v1
+							   kind: Role
+							   metadata:
+							     creationTimestamp: "2023-09-30T15:40:58Z"
+							     name: developer
+							     namespace: blue
+							     resourceVersion: "2865"
+							     uid: a612c6ea-dd90-4734-b0d4-51e5006a6770
+							   rules:
+							   - apiGroups:
+							     - ""
+							     resourceNames:
+							     - blue-app
+							     - dark-blue-app
+							     resources:
+							     - pods
+							     verbs:
+							     - get
+							     - watch
+							     - create
+							     - delete
+								 
+								 Important: Roles and Rolebindings are namespace scoped. If you dont specify a namespace on them, they will use the default namespace..
+								 Resources like nodes cant be categorized as namespaced scopped, theyre cluster scope resources.
+								 
+								 There4 we can categorize resources as namespace scoped resources and clusterwide resources..
+								 
+								 namespaced scoped resources are:
+								 Services, pvc,deployments,rs,rc,endpoints,events,configmaps,pods,jobs,secrets, roles and rolebindings
+								 
+								 Cluster Wide Resources:
+								 clusterRole,ClusterRoleBinding,CertificateSigningRequest,pv,namespaces,nodes
+								 
+								 To get the full lists of namespace scoped resources and cluster wide resources RUN:
+								 kubectl api-resources --namespaced=true  ---> Lists namespace scoped Resources
+								  kubectl api-resources --namespaced=false ---> lists ClusterWide Resources
+								  
+								  ALSO RUN TO GET THE apiGroups of a resource run:
+								   kubectl api-resources --namespaced=true
+								    kubectl api-resources --namespaced=false
+									
+									Check the APIVERSION FILED:
+									The core groups has v1 remove the v1 and use [""] which means empty or blank.
+									The named Groups eg. deployments has  apps/v1  remove the /v1 and use the first part which is ["apps"]
+									The same goes for others in the list..
+									
+									command to list without headers:
+									k get clusterrole -A --no-headers | wc -l
+									
+									
+									Examples:
+								    cat michelle.yaml 
+									
+									
+								   apiVersion: rbac.authorization.k8s.io/v1
+								   kind: ClusterRole
+								   metadata:
+								     name: storage-admin
+								   rules:
+								   - apiGroups: [""]
+								     #
+								     # at the HTTP level, the name of the resource for accessing ConfigMap
+								     # objects is "configmaps"
+								     resources: ["persistentvolumes"]
+								     verbs: [ "get", "create", "delete"]
+								   - apiGroups: [storage.k8s.io]
+								     #
+								     # at the HTTP level, the name of the resource for accessing ConfigMap
+								     # objects is "configmaps"
+								     resources: ["storageclasses"]
+								     verbs: [ "get", "create", "delete"]
+								   ---
+								   apiVersion: rbac.authorization.k8s.io/v1
+								   # This cluster role binding allows anyone in the "manager" group to read secrets in any namespace.
+								   kind: ClusterRoleBinding
+								   metadata:
+								     name: michelle-storage-admin
+								   subjects:
+								   - kind: User
+								     name: michelle # Name is case sensitive
+								     apiGroup: rbac.authorization.k8s.io
+								   roleRef:
+								     kind: ClusterRole
+								     name: storage-admin
+								     apiGroup: rbac.authorization.k8s.io
+									 
+									 
+									 VERY VERY IMPORTANT:
+									 As you know, there are certain groups that exists in the kubernetes cluster and examples of such groups include system:masters.
+									 Note that once you create a key and csr for a user and sign that CSR using the CA key and CAcert to get the user authenticated to the cluster.
+									 If in creating the csr you added the user to OU system:masters, and when granting authorization to the user using RBAC, you create a clusterrole say to create, delete, get pods and deployments
+									 and binds its using clusterrolebinding and in the subject you specify kind as Group and name as system:masters b/c that user was added to the group system:masters when generating the 
+									 csr will he/she inherite the clusterrole associated to that group system:masters???
+									 
+									 Can we also add a user to a non existing OU in kubernetes when generating CSR for authentication and use that group while creating RBAC to grant permission?? 
+									 The answer is YES..
+									 
+									 
+									 SOLUTION:
+									 
+									 In Kubernetes, adding a user to the `system:masters` group during the creation of a certificate signing request (CSR) and then binding that group to a ClusterRole using
+									  a ClusterRoleBinding will grant the user the permissions associated with that ClusterRole. So, in your scenario:
+
+									 1. You create a user and generate a CSR.
+									 2. During CSR creation, you add the user to the `OU system:masters`.
+									 3. You sign the CSR using the CA key and CA certificate to authenticate the user to the cluster.
+									 4. You create a ClusterRole that allows actions like creating, deleting, getting pods and deployments.
+									 5. You create a ClusterRoleBinding that binds the `system:masters` group to the ClusterRole.
+
+									 In this case, the user, because they are part of the `system:masters` group, will inherit the permissions associated with the ClusterRole. 
+									 This is because Kubernetes RBAC allows you to grant permissions to groups just like you would to individual users. By binding the `system:masters` group to the ClusterRole, 
+									 any user who is part of that group will have the permissions defined in the ClusterRole.
+
+									 Here's an example of what the ClusterRole and ClusterRoleBinding might look like in YAML:
+
+									 ```yaml
+									 apiVersion: rbac.authorization.k8s.io/v1
+									 kind: ClusterRole
+									 metadata:
+									   name: my-cluster-role
+									 rules:
+									 - apiGroups: [""]
+									   resources: ["pods", "deployments"]
+									   verbs: ["create", "delete", "get"]
+
+									 ---
+
+									 apiVersion: rbac.authorization.k8s.io/v1
+									 kind: ClusterRoleBinding
+									 metadata:
+									   name: my-cluster-role-binding
+									 subjects:
+									 - kind: Group
+									   name: system:masters
+									   apiGroup: rbac.authorization.k8s.io
+									 roleRef:
+									   kind: ClusterRole
+									   name: my-cluster-role
+									   apiGroup: rbac.authorization.k8s.io
+									 ```
+
+									 In this example, the `my-cluster-role` grants permissions for creating, deleting, and getting pods and deployments within the cluster. The `my-cluster-role-binding` 
+									 binds the `system:masters` group to the `my-cluster-role`, so any user who is part of the `system:masters` group will inherit these permissions.
 	 
 
  
