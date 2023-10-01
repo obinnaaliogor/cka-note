@@ -2114,6 +2114,220 @@ They comm bw each using localhost.
 
 									 In this example, the `my-cluster-role` grants permissions for creating, deleting, and getting pods and deployments within the cluster. The `my-cluster-role-binding` 
 									 binds the `system:masters` group to the `my-cluster-role`, so any user who is part of the `system:masters` group will inherit these permissions.
-	 
+									 
+									 Important: 
+									 Always use help. e.g
+									 kubectl create clusterrole --help
+									 
+									 
 
+									 Service Accounts:
+									 https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
+									 
+									 ServiceAccounts are used for authenticating machines,pods or external application into the kubernetes cluster.
+									 You create a service account and use the TokenRequest API to create a token with time bound for the service account.
+									 When that Service account or Token gets associated to a resource,machine or external apps that requires it they get authenticated into the cluster..
+									 
+									 NB: Authentication is differnt from authorization... You get authenticate first and then your role in the cluster gets defined using authorization mechanism.
+									 
+									 To create a Kubernetes ServiceAccount and generate a token with an expiration using the TokenRequest API, you can follow these steps:
+
+									   1. Create a ServiceAccount:
+										 
+										 apiVersion: v1
+										 kind: ServiceAccount
+										 metadata:
+			   						   name: my-serviceaccount
+									   
+										   Save this YAML to a file, e.g., serviceaccount.yaml, and apply it using kubectl apply -f serviceaccount.yaml.
+
+									2. Create a TokenRequest with an expiration time. You can specify the expiration time in seconds from the current time. 
+											F  or example, to generate a token that expires in 1 hour (3600 seconds):
+									
+											apiVersion: authentication.k8s.io/v1
+											kind: TokenRequest
+											metadata:
+											  name: my-tokenrequest
+											spec:
+											  audience: "api"
+											  expirationSeconds: 3600
+											  token: "" # Leave this empty
+											  
+							3. Create a TokenRequest and specify the serviceAccountName in the spec section to associate it with the desired ServiceAccount:
+							apiVersion: authentication.k8s.io/v1
+							kind: TokenRequest
+							metadata:
+							  name: my-tokenrequest
+							spec:
+							  audience: "api"
+							  expirationSeconds: 3600
+							  serviceAccountName: my-serviceaccount # Associate with the desired ServiceAccount
+							  token: "" # Leave this empty
+							
+							  This way the tokenRequest API gets associated to a service account.
+							  
+											  
+											  
+											  Save this YAML to a file, e.g., tokenrequest.yaml, and apply it using kubectl apply -f tokenrequest.yaml.
+
+											      Wait for a few moments to let the TokenRequest create a TokenRequest object in your cluster.
+												  
+						Retrieve the generated token using kubectl:
+						
+						kubectl get tokenrequests.authentication.k8s.io my-tokenrequest -o jsonpath='{.status.token}'
+						
+						This command will output the generated token, which will expire after the specified duration (in this example, 1 hour).
+						
+						
+				4. To mount a token from a ServiceAccount as a projected volume in a Kubernetes pod, you can follow these steps:
+				
+				apiVersion: v1
+				kind: Pod
+				metadata:
+				  name: my-pod
+				spec:
+				  serviceAccountName: my-serviceaccount  # Replace with your ServiceAccount name
+				  volumes:
+				    - name: token-volume
+				      projected:
+				        sources:
+				          - serviceAccountToken:
+				              path: my-token   # Path within the pod where the token will be mounted
+				              expirationSeconds: 3600  # Set this to the same value you used for token expiration
+				  containers:
+				    - name: my-container
+				      image: your-image
+				      volumeMounts:
+				        - name: token-volume
+				          mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+						  
+						  
+						  
+						  In the above YAML:
+
+						      Replace my-serviceaccount with the name of the ServiceAccount from which you want to mount the token.
+						      Adjust the path and expirationSeconds as needed.
+						      Ensure the mountPath in volumeMounts matches the path specified in the projected volume.
+
+						      Save the Pod YAML to a file, e.g., pod-with-token.yaml.
+
+						      Apply the Pod YAML to create the pod:
+							  kubectl apply -f pod-with-token.yaml
+					
+							  IMPORTANT:
+							 
+		This pod will be created with a volume named token-volume that contains the projected token from the specified ServiceAccount. 
+		The token will be mounted at the path /var/run/secrets/kubernetes.io/serviceaccount/my-token within the pod.
+
+	   Make sure to configure your application within the pod to use this token for any Kubernetes API requests. 
+	   The token will automatically be refreshed when it's close to expiration, thanks to Kubernetes' built-in token rotation mechanism.
+	   
+	   Ensure the mountPath in volumeMounts matches the path specified in the projected volume.
+	   Does that mean the volumes path which is my-token should be the same as the VolumeMounts /var/run/secrets/kubernetes.io/serviceaccount ???????
+	   
+	   
+	   Yes, that's correct. The `mountPath` in `volumeMounts` should match the path specified in the projected volume, which is the `path` within the `serviceAccountToken` source. In your case, both should be the same.
+
+	   In your YAML:
+
+	   ```yaml
+	   volumes:
+	     - name: token-volume
+	       projected:
+	         sources:
+	           - serviceAccountToken:
+	               path: my-token   # Path within the pod where the token will be mounted
+	   ```
+
+	   You've specified `path: my-token` in the `serviceAccountToken` source. Therefore, the corresponding `mountPath` in `volumeMounts` should be the same:
+
+	   ```yaml
+	   volumeMounts:
+	     - name: token-volume
+	       mountPath: /var/run/secrets/kubernetes.io/serviceaccount/my-token
+	   ```
+
+	   This configuration ensures that the token from the ServiceAccount is correctly mounted at the specified path within the pod, 
+	   making it accessible to applications running inside the pod for authentication and Kubernetes API access.
+
+
+	   You've specified path: my-token in the serviceAccountToken source. Therefore, the corresponding mountPath in volumeMounts should be the same:
+
+	   yaml
+
+	   volumeMounts:
+	     - name: token-volume
+	       mountPath: /var/run/secrets/kubernetes.io/serviceaccount/my-token
+
+	   This configuration ensures that the token from the ServiceAccount is correctly mounted at the specified path within the pod, 
+	   making it accessible to applications running inside the pod for authentication and Kubernetes API access.
+	   
+	   so both can be /var/run/secrets/kubernetes.io/serviceaccount/my-token ????
+	   
+	   Yes, both the `path` specified in the `projected` volume and the `mountPath` in `volumeMounts` can be set to `/var/run/secrets/kubernetes.io/serviceaccount/my-token`. 
+	   In fact, this is a common and recommended practice when mounting a service account token.
+
+	   Here's how it should look in your YAML:
+
+	   ```yaml
+	   volumes:
+	     - name: token-volume
+	       projected:
+	         sources:
+	           - serviceAccountToken:
+	               path: /var/run/secrets/kubernetes.io/serviceaccount/my-token
+	   ```
+
+	   And in the `volumeMounts` section:
+
+	   ```yaml
+	   volumeMounts:
+	     - name: token-volume
+	       mountPath: /var/run/secrets/kubernetes.io/serviceaccount/my-token
+	   ```
+
+	   This configuration ensures consistency and clarity, making it clear that the service account token is being mounted to the standard path used for service account tokens within Kubernetes pods.
+	   
+	   
+	   ............................................................
+	   So we can then create a pod object, associate the service account and mount the token as a projected volume ???
+	   
+	   
+	   Exactly, that's the workflow. Once you've created the `TokenRequest` associated with a specific ServiceAccount, you can create a pod object, specify the ServiceAccount you want to use for that pod, and mount the token as a projected volume in the pod. Here's a step-by-step breakdown:
+
+	   1. Create a `TokenRequest` associated with a ServiceAccount as shown earlier.
+
+	   2. Create a Pod YAML that uses the ServiceAccount you want and mounts the projected token volume:
+
+	   ```yaml
+	   apiVersion: v1
+	   kind: Pod
+	   metadata:
+	     name: my-pod
+	   spec:
+	     serviceAccountName: my-serviceaccount # Use the desired ServiceAccount
+	     volumes:
+	       - name: token-volume
+	         projected:
+	           sources:
+	             - serviceAccountToken:
+	                 path: my-token # Path within the pod where the token will be mounted
+	     containers:
+	       - name: my-container
+	         image: your-image
+	         volumeMounts:
+	           - name: token-volume
+	             mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+	   ```
+
+	   3. Apply the Pod YAML using `kubectl apply -f pod.yaml`.
+
+	   With this setup, the pod will use the specified ServiceAccount, and the token from the associated `TokenRequest` will be mounted as a volume inside the pod.
+	    You can then use this token for authentication and authorization within the cluster.
+
+	   Ensure that the ServiceAccount used in the pod (`my-serviceaccount` in this example) has the necessary RBAC permissions to perform the actions you intend to use the token for.
+	   
+	   Refference:
+	   ----
+	   https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/#bound-service-account-token-volume
  
