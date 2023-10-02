@@ -2331,3 +2331,312 @@ They comm bw each using localhost.
 	   ----
 	   https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/#bound-service-account-token-volume
  
+ 
+
+	   Image Security:
+	   
+	   https://kubernetes.io/docs/concepts/containers/images/
+	   https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+	   
+	   apiVersion: v1
+	   kind: Pod
+	   metadata:
+	     name: private-reg
+	   spec:
+	     containers:
+	     - name: private-reg-container
+	       image: <your-private-image>
+	     imagePullSecrets:
+	     - name: regcred
+
+		 kubectl create secret docker-registry <name> \
+		   --docker-server=DOCKER_REGISTRY_SERVER \
+		   --docker-username=DOCKER_USER \
+		   --docker-password=DOCKER_PASSWORD \
+		   --docker-email=DOCKER_EMAIL
+		   
+		   OR
+		   
+		   kubectl create secret docker-registry regcred --docker-server=<your-registry-server> --docker-username=<your-name> --docker-password=<your-pword> --docker-email=<your-email>
+		   
+		   
+
+Pre-requisite – Security in Docker
+Configure a Security Context for a Pod or Container
+https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: security-context-demo
+spec:
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+  volumes:
+  - name: sec-ctx-vol
+    emptyDir: {}
+  containers:
+  - name: sec-ctx-demo
+    image: busybox:1.28
+    command: [ "sh", "-c", "sleep 1h" ]
+    volumeMounts:
+    - name: sec-ctx-vol
+      mountPath: /data/demo
+    securityContext:
+      allowPrivilegeEscalation: false
+
+kubectl exec -it security-context-demo-2 -- sh
+
+Important:
+By default, the process in a container runs as a root user.
+Also if you set a securitycontext of runAsUser: 0, the processes in the container also runs as a root user.
+You can also use the capabilities options to add more capability..
+
+
+
+
+Network Policies:
+
+Note that Ingress or Egress isolations comes into effect if you have Ingress or Egress in the PolicyTypes:
+If You do not specify Ingress or Egress in the policytypes there wont be any isolation of traffic.
+
+Example:
+
+We have 3 pods, a webserver serving the frontend on port 80, an api pod running on 5000 at the backend and a db pod on 3306.
+The web app pods talks to the api pod and the api pod talks to the db pod and fetches data from the DB pod and retruns it back to the user.
+Now: We want to ensure that the traffic from the enduser on 80 via the web application do not go directly to the db pod..
+
+We want a situation whereby our db pod can only accept Ingress traffic from the api pod on port 3306 only.
+
+We will use labels and selector concept..
+We will use NetworkPolicy
+
+We create a networkPolicy with policytypes Ingress..
+First we specify the podSelector and matchLabels options and add the label of the pod traffic will go to.
+The policyTypes we specify Ingress or Egress and enter the label of the pod we want traffic to come from.
+
+example:
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: db-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: db
+  policyTypes:
+  - Ingress   # Specify the policy type as Ingress.. This means you are isolating Ingress traffic, you are allowing ingress traffic only from pods that has labels app: api
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: api
+    ports:
+    - protocol: TCP
+      port: 3306
+	  Important, not all network solutions supports NetworkPolicy, this is dependent on the network solutions you are using in your cluster.
+	  
+	  supports networkpolicy:
+	  Romana
+	  Weave-net
+	  Calico
+	  kube router
+	  
+	  non support:
+	  Flannel
+	  NB: Even with a solution that does not support networkpolicy, you can still create the object, but the networkpolicy cant be enforced...
+	  Also note that youll not get an error msg saying that the solution does not not support network policy.
+	  
+https://kubernetes.io/docs/concepts/services-networking/network-policies/
+
+....
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: test-network-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      role: db
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - ipBlock:
+            cidr: 172.17.0.0/16
+            except:
+              - 172.17.1.0/24
+        - namespaceSelector:
+            matchLabels:
+              project: myproject
+        - podSelector:
+            matchLabels:
+              role: frontend
+      ports:
+        - protocol: TCP
+          port: 6379
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/24
+      ports:
+        - protocol: TCP
+          port: 5978
+
+		  ...
+
+So, the example NetworkPolicy:
+
+    isolates role=db pods in the default namespace for both ingress and egress traffic (if they weren't already isolated)
+
+    (Ingress rules) allows connections to all pods in the default namespace with the label role=db on TCP port 6379 from:
+        any pod in the default namespace with the label role=frontend
+        any pod in a namespace with the label project=myproject
+        IP addresses in the ranges 172.17.0.0–172.17.0.255 and 172.17.2.0–172.17.255.255 (ie, all of 172.17.0.0/16 except 172.17.1.0/24)
+
+    (Egress rules) allows connections from any pod in the default namespace with the label role=db to CIDR 10.0.0.0/24 on TCP port 5978
+	
+	NB: The namespaceselector when used in a networkpolicy determines which namespace traffic is allowed to reach a pod...
+	When use for instance as:
+	
+1. example, This uses AND operator concept. This means a pod in a namespace labled user:alice and pods with labels role:client
+    ...
+     ingress:
+     - from:
+       - namespaceSelector:
+           matchLabels:
+             user: alice
+         podSelector:
+           matchLabels:
+             role: client
+This policy contains a single from element allowing connections from Pods with the label role=client in namespaces with the label user=alice. 
+...
+Yes, you are correct. The example you provided uses the AND operator concept in Kubernetes NetworkPolicy.
+
+In this example, the NetworkPolicy is specifying that it allows Ingress traffic to pods with a particular set of labels:
+
+- The Ingress rule allows traffic from pods that meet both of the following conditions:
+  1. They are in a namespace labeled `user: alice`.
+  2. They have labels with `role: client`.
+
+Both conditions must be met for traffic to be allowed. This is effectively using the AND operator, meaning that both conditions need to be true for the rule to permit traffic.
+
+So, only pods in namespaces with the label `user: alice` AND having the labels `role: client` will be allowed to send Ingress traffic according to this NetworkPolicy.
+
+
+
+
+2. example: This uses OR operator, this or that.. any one of the rules that matches works
+
+...
+ingress:
+- from:
+  - namespaceSelector:
+      matchLabels:
+        user: alice
+  - podSelector:
+      matchLabels:
+        role: client
+...
+
+It contains two elements in the from array, and allows connections from Pods in the local Namespace with the label role=client, or from any Pod in any namespace with the label user=alice.
+
+When in doubt, use kubectl describe to see how Kubernetes has interpreted the policy.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: internal-policy
+spec:
+  podSelector:
+    matchLabels:
+      name: internal
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+      - podSelector:
+          matchLabels:
+            name: payroll
+        podSelector:
+          matchLabels:
+            name: mysql
+      ports:
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 3306
+		  
+This corrected NetworkPolicy allows egress traffic from pods labeled name: internal to pods labeled name: payroll and name: mysql on ports 8080 and 3306.
+
+
+
+
+EXTRA:
+......
+
+Kubectx and Kubens – Command line Utilities
+
+
+Throughout the course, you have had to work on several different namespaces in the practice lab environments. In some labs, you also had to switch between several contexts.
+
+While this is excellent for hands-on practice, in a real “live” kubernetes cluster implemented for production, there could be a possibility of often switching between a large number of namespaces and clusters.
+
+This can quickly become and confusing and overwhelming task if you had to rely on kubectl alone.
+
+This is where command line tools such as kubectx and kubens come in to picture.
+
+Reference: https://github.com/ahmetb/kubectx
+
+Kubectx:
+
+With this tool, you don’t have to make use of lengthy “kubectl config” commands to switch between contexts. This tool is particularly useful to switch context between clusters in a multi-cluster environment.
+
+Installation:
+
+sudo git clone https://github.com/ahmetb/kubectx /opt/kubectx
+sudo ln -s /opt/kubectx/kubectx /usr/local/bin/kubectx
+
+Syntax:
+
+To list all contexts:
+
+kubectx
+
+To switch to a new context:
+
+kubectx
+
+To switch back to the previous context:
+
+kubectx –
+
+To see the current context:
+
+kubectx -c
+
+Kubens:
+
+This tool allows users to switch between namespaces quickly with a simple command.
+
+Installation:
+
+sudo git clone https://github.com/ahmetb/kubectx /opt/kubectx
+sudo ln -s /opt/kubectx/kubens /usr/local/bin/kubens
+
+Syntax:
+
+To switch to a new namespace:
+
+kubens
+
+To switch back to previous namespace:
+
+kubens –
