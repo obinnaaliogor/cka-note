@@ -3949,17 +3949,17 @@ In summary, hostnames are used for local network identification and may not be u
 	
 	We add portforwarding options using iptable rule to say any traffic coming from port 80 on the localhost is to be forwarded to port 80 on the IP assigned to the blue namespace.
 	
-	iptables -t NAT -A PREROUTING --dport 80 --to-destination 192.168.15.1:80
+	iptables -t NAT -A PREROUTING --dport 80 --to-destination 192.168.15.1:80 -J DNAT
 	No ping 192.168.15.1 from the external host:
 	This will give you a response..
 	
 	MORE ON THE COMMAND:
-	The command you've provided is an `iptables` command used to configure port forwarding in a Linux system.
-	 Port forwarding is a technique used to redirect incoming network traffic from one port on a host to another port on a different host or the same host. Let's break down the command:
+	The command you've provided is an `iptables` command used to configure port forwarding in a Linux system. 
+	Specifically, it's configuring Destination Network Address Translation (DNAT) in the PREROUTING chain of the NAT (Network Address Translation) table. Let's break down the command:
 
-	- `iptables`: This is the command for configuring the Linux kernel's packet filtering rules, including NAT and firewall rules.
+	- `iptables`: This is the command for configuring the Linux kernel's packet filtering rules, including NAT rules.
 
-	- `-t NAT`: This specifies the table within `iptables` where the rule should be added. In this case, it's the "nat" table, which is used for configuring NAT (Network Address Translation) rules.
+	- `-t NAT`: This specifies the table within `iptables` where the rule should be added. In this case, it's the "nat" table, which is used for configuring NAT rules.
 
 	- `-A PREROUTING`: This option specifies that the rule should be appended (`-A`) to the PREROUTING chain. 
 	The PREROUTING chain is part of the NAT table and is used for performing actions on packets before they are routed.
@@ -3967,12 +3967,175 @@ In summary, hostnames are used for local network identification and may not be u
 	- `--dport 80`: This specifies the destination port (`--dport`) that incoming packets should match.
 	 In this case, it's port 80, which is commonly used for HTTP traffic.
 
-	- `--to-destination 192.168.15.1:80`: This option specifies the new destination for packets that match the rule. 
-	It means that incoming packets with a destination port of 80 will be forwarded to the IP address `192.168.15.1` on port 80.
+	- `--to-destination 192.168.15.1:80`: This option specifies the new destination for packets that match the rule.
+	 It means that incoming packets with a destination port of 80 will be forwarded to the IP address `192.168.15.1` on port 80.
 
-	In summary, this `iptables` command is configuring port forwarding for incoming traffic that arrives at port 80 of the router or firewall where the rule is applied.
-	 It forwards incoming HTTP traffic (port 80) to the internal host with the IP address `192.168.15.1` on port 80. 
-	This is a common setup for exposing a web server hosted on an internal network to the internet.
+	- `-J DNAT`: This specifies the action to take when a packet matches the rule.
+	 In this case, it's `DNAT`, which stands for Destination Network Address Translation. DNAT is used to modify the destination IP address and/or port of incoming packets.
+
+	In summary, this `iptables` command is configuring port forwarding for incoming traffic that arrives at port 80 on the host where the rule is applied. 
+	It forwards incoming HTTP traffic (port 80) to the internal host with the IP address `192.168.15.1` on port 80. 
+	
+This is a common setup for exposing a web server hosted on an internal network to external traffic by forwarding incoming requests from the host's port 80 to the internal server's port 80.
+
+IMPORTANT:
+
+	While testing the Network Namespaces, if you come across issues where you can’t ping one namespace from the other,
+	 make sure you set the NETMASK while setting IP Address. ie: 192.168.1.10/24
+
+	ip -n red addr add 192.168.1.10/24 dev veth-red
+
+	Another thing to check is FirewallD/IP Table rules. Either add rules to IP Tables to allow traffic from one namespace to another.
+	 Or disable IP Tables all together (Only in a learning environment).
+	 
+	 
+
+	 Prerequisite Docker Networking:
+	 How does manages network in Linux.
+	 Lets start with a single docker host. A server with docker install on it.
+	 This server has an ethernet port or interface at eth0 with the ip.. 192.168.1.10 that connects to the local area network LAN.
+	 When you run a docker container, you have diff network options to choose from..
+	 
+	 1. The none network
+	 2. The host network
+	 3. The bridge network
+	 
+	 1. The none network: When you run containers using this network, they're isolated from each other and are not part of any network, this containers cannot talk to the outside world..
+	 This containers cannot be accessed also from the outside..
+	 
+	 2. The host network: The container is attached to the host network and there is no network isolation bw the container and the host.
+	 If you deploy a web application on port 80, the web application is available on port 80 on the host.
+	 You do not need to do additional configuration and you do not have to do a port mapping..
+	 If you try to run another instance of a container that runs on the same port, it wont work as they share the same host networking and 2 processes cannot run on the same port at the same time.
+	 
+	 3. The bridge Network: In this case an internal network is created which the docker host and networks attach to. say the network has an ip 172.17.0.0 by default and each
+	 devices connecting to this network, gets their internal network address from this network.
+	 
+	 HOW does docker manage this network??
+	 
+	 When you install docker on a host, it creates an internal network called bridge by default.
+	 Run docker network ls ---> This shows you the network
+	 Docker calls this network bridge but on the host is called docker0
+	 
+	 Run: ip link command on the host and look at the output.
+	 You will see the docker0 interface.
+	 
+	 Docker uses  the same techniques as we saw in the network namespace in linux by running.
+	 
+	 ip link add docker0 type bridge
+  
+     This creates a switch/network/interface on the host that will be used to link the namespaces.
+     To the namespaces its a switch to connect them
+     To the host is just another interface on it.
+	 
+	 So the interface on the host, docker0 is assigned an ip of 172.17.0.1 
+	 Run:
+	 ip addr comand on the host --> THis will show you the ip address of the docker0 interface..
+	 
+	 Whenever a container is created docker creates a network namespace for it.
+	 Run:
+	 ip netns --> List the namespaces
+	 More on this to display the namespaces associated with each containers..
+	 
+	 Run:
+	 docker container inspect <container-id> --> This output will show you the namespace associated with the said container..
+	 
+	 How does docker attach the network namespace or the container to the bridge network???
+	 
+	 Important: 
+	 In our context, a container and a network namespace means the same thing....
+	 
+	 When i say container, iam referring to the namespace created for that container...
+	 
+	 HOW DOES DOCKER ATTACH THE CONTAINER TO THE BRIDGE??
+	 
+	 Docker also uses the same techniques that we used in network namespace in linux.
+	 
+	 It creates a virtual cable/pipe/ and attach one end to the conatiner/namespace and the other on the docker0 interface.
+	 
+	 example:
+	 run ip link command on the host --> You will also see the one end of the pipe/cable/ that was attached to the docker0 interface. (vethbb1c...@if7)
+	 RUN: ip netns exec <name-of-the-namespace-or-numbers> ip link --> This will show you the other end of the pipe/cable attached to the namespace. (eth0@if8)
+	 
+	 NB They end with odd numbers and even numbers who you look closely at the pipes/cables..
+	 The interface/namespace also gets an ip address assigned to it.
+	 You can see this by running, 
+	 ip netns exec <namespace name> ip addr
+	 
+	 This will show you the ip assigned to the interface/namespace/container and this is also reffered to as the container ip.
+	 This same process is repeated by docker eachtime a container is created..
+	 Say we have multiple containers, docker follows this pattern and the containers can now talk to each other
+	 
+	
+	 PORT MAPPING:
+	 
+	 Lets say the container we deployed is an nginx container running on port 80 on the namespace.
+	 Other containers cannot access this container except theyre in the network.
+	 But the host itself can access this container.
+	 
+	 Lets say you try to access the container from the docker host on port 80:
+	 
+	 e.g
+	 curl http://172.17.0.30:80
+	 You'll be able to access it.
+	 .....
+	 Lets try doing the same thing from outside the host...
+	 curl http://172.17.0.30:80
+	 
+	 Youre unable to reach the website.
+	 
+	 To allow external users to access the application, docker provides port publishing or port mapping option..............
+	 
+	 docker run -dit nginx -p 8080:80
+	 
+	 When you run your container, you have to tell docker to map port 8080 on the docker host to port 80 on the container.........
+	 When you do this, any traffic coming on port 8080 on the host will be forwarded to port 80 on the container, this way all of your external users can then access the application externally using
+	 the ip address of the host and port 8080
+	 
+	 HOW DOES DOCKER DO THIS?
+	 HOW DOES IT FOWARD TRAFFIC FROM ONE PORT TO ANOTHER???????
+	 Lets say the requirement is to forward traffic from one port to another port on the server!
+	 We create a NAT rule for that, using iptables 
+ 	iptables -t NAT -A PREROUTING -J DNAT --dport 8080 --to-destination 80
+	
+	DOCKER DOES IT THE SAME WAY:
+	
+	
+ 	iptables -t NAT -A DOCKER -J DNAT --dport 8080 --to-destination <IP-OF-THE-CONTAINER>:80
+	
+	You can see the rules docker creates when you list the rules in iptables:
+	iptables -nVL -t NAT
+	 
+	................
+	The command you've provided is an `iptables` command used in the context of Docker container networking. 
+	It configures a rule in the NAT (Network Address Translation) table to perform Destination Network Address Translation (DNAT). 
+	This is typically used in Docker to forward incoming traffic from a host port to a port inside a running Docker container. Let's break down the command:
+
+	- `iptables`: This is the command for configuring the Linux kernel's packet filtering rules, including NAT rules.
+
+	- `-t NAT`: This specifies the table within `iptables` where the rule should be added. In this case, it's the "nat" table, which is used for configuring NAT rules.
+
+	- `-A DOCKER`: This specifies that the rule should be appended (`-A`) to the DOCKER chain. The DOCKER chain is used by Docker to manage network traffic to and from containers.
+
+	- `-J DNAT`: This option specifies the action to take when a packet matches the rule. 
+	
+	In this case, it's `DNAT`, which stands for Destination Network Address Translation. It is used to modify the destination IP address and/or port of incoming packets.
+
+	- `--dport 8080`: This specifies the destination port (`--dport`) that incoming packets should match. In this case, it's port 8080, which is the host port you want to forward traffic to.
+
+	- `--to-destination <IP-OF-THE-CONTAINER>:80`: This option specifies the new destination for packets that match the rule.
+	 It forwards incoming packets with a destination port of 8080 to the IP address of the Docker container (`<IP-OF-THE-CONTAINER>`) on port 80.
+
+	In Docker, this rule is used to allow incoming traffic to reach a specific container by mapping a host port to a container port. 
+	For example, if you want to access a web server running inside a Docker container on port 80, you can configure this rule to forward traffic from port 8080 on the host to port 80 inside the container.
+
+	The command to list the rules in the NAT table (`iptables -nVL -t NAT`) is useful for inspecting and verifying the configured rules, including Docker-related rules for network address translation.
+	 
+	 
+	 
+	 
+	 
+	
 	
   
   
