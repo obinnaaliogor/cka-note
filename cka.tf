@@ -3821,9 +3821,159 @@ In summary, hostnames are used for local network identification and may not be u
    ip addr add 192.168.15.1/24 dev v-net-0 --> with this we will be able to ping the blue namespace.
    ping 192.168.15.1
    goes through and returns a response.. Sends a packet, it receives the packet and returns back a response..
+   
+   Finally: This entire network is private, we cannot reach the outside world..
+   The outside world cannot reach the services or application hosted inside our namespaces..
+   The only route to the outside world is through the ethernet port on our host..
+   
+   How do we configure our bridge network to reach the LAN network (192.168.1.0) via the ethernet port on the host?
+   
+   Lets say we have another host attached to our LAN network with the ip 192.168.1.3
+   NOTE: Our host has a LAN attached to it and we are assuming that the LAN has another host attached to it. 
+   How do i reach this HOST IP from my namespaces?
+   lETS PING IT FROM THE BLUE NAMESPACE
+   ip netns exec blue ping 192.168.1.3
+   
+   This will return an unreachable message...
+   A look at the route of the blue namespace..
+   ip netns exec blue route, this displays that it does not not kwn or have a route to the outside network attached to our LAN.
+   
+   We need to add an entry or a door, a gateway to the outside world..
+   This is just a system on the local network that connects to the other networks..
+   A passage to the other network..
+   
+   What is the system that has one interface on the network local to the blue namespace or the bridge network on 192.168.15.0 and is also connected to the outside LAN network???
+   That is our localhost. Our localhost with the ip 192.168.1.2 has an interface to the bridge network(v-net-0) which enables it to ping the namespaces and also an ethernet port <eth0> interface connecting to the LAN outside.
+   Therfore our host becomes our gateway or our door to the outside world...
+   
+   Important:
+   We are trying to reach the outside world. Remember, there is a LAN in bw 2 hosts. Our localhost and the other host.
+   To reach the outside network, we add a route on our blue namespace to reach it.
+   
+   ip netns exec blue route add <ip-address-of-the-LAN> via <the-ip-address-v-net-0>
+   NB: The LAN links both hosts and our localhost interfaces with v-net-0 with ip 192.168.15.5
+   
+   ip netns exec blue route add 192.168.1.0/24 via 192.168.15.5
+   
+   ping the outside host again from the blue namespace..
+   ip netns exec blue ping 192.168.1.3
+   
+   You no longer get an unreachable msg from the command but you dont get response from the network..
+   This is b/c the outside network does not know about the internal bridge network and ips.
+   How do we solve this?
+   We need NAT enabled on our host acting as a gateway so that that it can send msgs to the LAN in its own name with its own address. \(since the LAN knows/is linked our host)\
+   
+   We use the iptables to add NAT functionality to our host..
+   RUN:
+   iptables -t nat -A POSTROUTING -s 192.168.15.0/24 -J MASQUERADING
+   
+   Add a new rule in the NAT iptables, in the POSTROUTING chain to masquerade or replace the from address on all packet coming from the source network 192.168.15.0/24 with its own ip address.
+   This way, anyone receiving the packets will think theyre coming from the host and not from within the namespaces..
+   
+   ping the outside host again from the blue namespace..
+   ip netns exec blue ping 192.168.1.3
+   
+   This works and we are happy..
+   
+   
+   MORE EXPLANATION:
+   
+   The command you've provided is an `iptables` command used to configure Network Address Translation (NAT) in a Linux system.
+    NAT is commonly used for allowing multiple devices on a private network to share a single public IP address for accessing resources on the internet. Let's break down the command:
+
+   - `iptables`: This is the command for configuring the Linux kernel's packet filtering rules, including NAT rules.
+
+   - `-t nat`: This specifies the table within `iptables` where the rule should be added. In this case, it's the "nat" table, which is used for configuring NAT rules.
+
+   - `-A POSTROUTING`: This option specifies that the rule should be appended (`-A`) to the POSTROUTING chain. 
+   The POSTROUTING chain is part of the NAT table and is used for post-routing operations, including NAT.
+
+   - `-s 192.168.15.0/24`: This specifies the source IP address or network that should be subject to NAT.
+    In this case, it's the source network `192.168.15.0/24`, meaning all IP addresses within the `192.168.15.0` subnet.
+
+   - `-J MASQUERADING`: This specifies the action to take when a packet matches the rule. 
+   In this case, it's `MASQUERADING`, which is a form of NAT that allows the source
+    IP addresses of outgoing packets from the specified source network (`192.168.15.0/24`) to be replaced with the IP address of the router or firewall performing the NAT.  
+   This is typically used for enabling multiple devices on a private network to share a single public IP address for internet access.
+
+   In summary, the command is telling the Linux kernel to apply NAT (MASQUERADING) to 
+   outgoing packets from the `192.168.15.0/24` subnet, so that their source IP addresses are replaced with the
+    IP address of the router or firewall performing the NAT. This allows devices in the `192.168.15.0/24` network to access resources on the internet using a shared public IP address.
+   
+   
  
   
-  
+	FINALLY SAY THE LAN IS CONNECTED TO THE INTERNET:
+	
+	We try to ping the internet:
+	ip netns exec blue ping 8.8.8.8
+	We get a return of network unreachable
+	
+	Lets check our route to see if we have a route to the internet.
+	
+	ip netns exec blue route
+	This will show you that we do not have a route to the internet but to only the LAN NETWORK <192.168.1.0>
+	
+	We decide to add a route to the internet.
+	
+	ip netns exec blue ip route add default via 192.168.15.5 --> we add a door to the internet, if you want to access the internet talk to our host.
+	We try to ping the internet again:
+	ip netns exec blue ping 8.8.8.8
+	We get a return of response... success...
+	
+	WHAT ABOUT CONNECTIVITY FROM OUTSIDE WORLD TO THE NAMESPACES????????
+	
+	Lets say the blue namespace hosts a web application on port 80.
+	As at the moment, the namespaces are on an internal network and no one from the outside world knows them...
+	We can only access resouces externally but cant receive external communication.
+	
+	Lets try it..
+	Let ping the blue namespace network from a host outside our network.
+	ping 192.168.15.1
+	This will output network unreachable error...
+	The host does not know about the private network.
+	
+	How can we make our internal network be accessed from the outside world.
+	How can we make services or application hosted on our internal network be made available to end users??
+	
+	We have 2 options to solve this::::
+	1. To give away the identity of the internal network to the outside host.
+	
+	we add:
+	
+	ip netns exec blue ip route add <the-ip-of-blue-namespace> via <The-ip-of-the-host>
+	The second ip of our host and not the v-net-0 ip which is also on our host.
+	But this is not what we want.
+	
+	Alternatively, 
+	
+	We add portforwarding options using iptable rule to say any traffic coming from port 80 on the localhost is to be forwarded to port 80 on the IP assigned to the blue namespace.
+	
+	iptables -t NAT -A PREROUTING --dport 80 --to-destination 192.168.15.1:80
+	No ping 192.168.15.1 from the external host:
+	This will give you a response..
+	
+	MORE ON THE COMMAND:
+	The command you've provided is an `iptables` command used to configure port forwarding in a Linux system.
+	 Port forwarding is a technique used to redirect incoming network traffic from one port on a host to another port on a different host or the same host. Let's break down the command:
+
+	- `iptables`: This is the command for configuring the Linux kernel's packet filtering rules, including NAT and firewall rules.
+
+	- `-t NAT`: This specifies the table within `iptables` where the rule should be added. In this case, it's the "nat" table, which is used for configuring NAT (Network Address Translation) rules.
+
+	- `-A PREROUTING`: This option specifies that the rule should be appended (`-A`) to the PREROUTING chain. 
+	The PREROUTING chain is part of the NAT table and is used for performing actions on packets before they are routed.
+
+	- `--dport 80`: This specifies the destination port (`--dport`) that incoming packets should match.
+	 In this case, it's port 80, which is commonly used for HTTP traffic.
+
+	- `--to-destination 192.168.15.1:80`: This option specifies the new destination for packets that match the rule. 
+	It means that incoming packets with a destination port of 80 will be forwarded to the IP address `192.168.15.1` on port 80.
+
+	In summary, this `iptables` command is configuring port forwarding for incoming traffic that arrives at port 80 of the router or firewall where the rule is applied.
+	 It forwards incoming HTTP traffic (port 80) to the internal host with the IP address `192.168.15.1` on port 80. 
+	This is a common setup for exposing a web server hosted on an internal network to the internet.
+	
   
   
   
