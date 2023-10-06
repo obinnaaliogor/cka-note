@@ -2994,8 +2994,856 @@ and there are no issues with your underlying storage infrastructure.
 
 Overall, `WaitForFirstConsumer` can be an efficient and flexible choice for managing storage resources in a Kubernetes cluster, especially when you want to optimize resource allocation.
 
+...............
+
 
 
 Networking:
 
+Prerequisite Switching, Routing, Gateways CNI in kubernetes
+We have 2 computers system A and B.
+How does A reach B?
+We connect them to a switch and the switch creates a network connecting the 2 systems..
+To connect them to a switch, we need an interface on each host, pysical/virtual...
 
+SOLUTION:
+To view or modify an interface on the host for connectivity of the systems. We run the ip link command on the hosts..
+RUN
+ip link. This will output an interface called eth0 This is what will be used to connect to the switch on the hosts.
+
+Lets assign the network the IP 192.168.1.0/24
+We then assign an IP for host with ip range of the same network say  192.168.1.10 for host A and Host B 192.168.1.11
+
+We assign this IPs to each host using the below command.
+Host A:  ip addr add 192.168.1.10/24 dev eth0
+Host B:  ip addr add 192.168.1.11/24 dev eth0
+
+Explainning the command:
+
+
+In the command `ip addr add 192.168.1.10/24 dev eth0`, the "dev" stands for "device." It is used to specify the network device (or interface) to which you want to assign the IP address.
+
+Here's a breakdown of the command:
+
+- `ip addr add`: This part of the command is telling the system that you want to add an IP address.
+
+- `192.168.1.10/24`: This is the IP address you want to assign, along with its subnet mask (/24 indicates a subnet mask of 255.255.255.0).
+
+- `dev eth0`: Here, "dev" is followed by the name of the network interface, which is `eth0` in this case. 
+This part of the command specifies the network interface to which the IP address should be assigned.
+
+So, the command is instructing the system to add the IP address 192.168.1.10 with a subnet mask of 255.255.255.0 to the network interface `eth0`. 
+This is how you configure the network interface with a specific IP address in Linux.
+
+With this we have created an interface on the hosts and assigned cidr to the hosts and established a connection bw 2 systems
+
+
+TEST THE CONNECTION:
+
+From Host A ping host B
+ping 192.168.1.11
+
+You'll get a parket sent....
+
+
+2 SAY WE HAVE ANOTHER SYSTEM C AND D.
+ network is of the IP 192.168.2.0/24, a network address and subnet mask
+
+ SOLUTION:
+ To list/modify interface on the host for connectivity of the systems. We run the ip link command on the hosts..
+ RUN
+ ip link. This will output an interface called eth0 .
+ This is what will be used to connect to the switch on the hosts.
+
+ Lets assign the network the IP 192.168.2.0/24
+ We then assign an IP for host with ip range of the same network say  192.168.2.10 for host C and Host D 192.168.2.11
+
+ We assign this IPs to each host using the below command.
+ Host C:  ip addr add 192.168.2.10/24 dev eth0
+ Host D:  ip addr add 192.168.2.11/24 dev eth0
+
+ With this we have added an IP address to the  interface on the hosts or assigned IP to the hosts and established a connection bw 2 systems
+ 
+ TEST THE CONNECTION:
+
+ From Host C ping host D
+ ping 192.168.2.11
+
+ You'll get a parket sent....
+ 
+ 
+ THE QUESTION IS HOW CAN WE MAKE THE NETWORK A,B TO COMMUNICATE WITH C,D NETWORK.
+ How can the Host B talk to host C?
+ 
+ This is where a Router comes in. A router helps to connect diff networks together.
+ Devices on different subnets: If you have devices on different subnets, you would typically need a router or a layer 3 switch to route traffic between these subnets. 
+ The router or layer 3 switch will have interfaces in each subnet, and it knows how to forward packets between them.
+ 
+ To establish connectivity bw the network of A,B and C,D we use  a Router to link the two networks.
+ The router will be assigned 2 ips one for each side of the network.
+ 
+ Therefore Router linking network A,B gets assigned 192.168.1.1 and The same router linking network C,D gets assigned 192.168.2.1
+ Summarily, A router with 2 ips one ip handling A,B and the other C,D.
+ The Router is in between the networks to ensure the connections happens.
+ 
+ Important:
+ When system B trys to send a packet to system C on the network.
+ How does it know where the router is on the network to send a packet through? Since the router is just another device on the network...
+ There could be many other such devices..
+ That is where we configure the network with a gateway..
+ 
+ If the network was a room and the router was a rope joining diff networks together, the gateway is like a door to meeting other networks outside or to the internet.
+ 
+ The systems or hosts needs to know where that door/route/gateway is in other to pass through it.
+ 
+ To see the existing routing configurations on a system.
+ Run:
+ route --> This will display the kernels routing tables. If there are routing configurations, youll see it in the output..
+ If no output of ips from the route command, it simply means that system B cant be able to reach system C b/c there are no routing configuration.
+ System B can only reach A because theyre on the same network.
+ 
+ Its important to note that using a router alone to link the 2 networks doesnt guranteed connectivity or transfer of data bw the 2 networks but a step that must be followed to acheieve your gaol.
+ 
+ How can we add a door or route to be able to reach the network of host C,D from A,B
+ How can we add a door/route/gateway to reach the network of hosts A,B from C,D
+ 
+ Important:
+ Remember when we used a router to link network  of host A,B and C,D, we had 2 ips for the router... 
+ Network of host A,B ----> had 192.168.1.1 on the router and Network of host C,D ----> had 192.168.2.1 on the router.
+ 
+ Therefore 
+ 1. For host A,B to reach Hosts C,D 
+ 
+ RUN:
+ ip route add 192.168.2.0/24 via 192.168.1.1
+ where 192.168.2.0/24 ip of network of host C,D
+ where 192.168.1.1 is the IP of the router on A,B side of the connectivity.
+ 
+ 2.  For host C,D to reach Hosts  A,B
+ RUN:
+
+ ip route add 192.168.1.0/24 via 192.168.2.1
+ where 192.168.1.0/24 ip or network of host A,B
+ where 192.168.2.1 is the IP of the router on C,D side of the connectivity.
+ 
+ 
+3. What if these systems Needs access to the internet???
+ 
+ Say the network of hosts C,D needs access to the internet on 172.217.194.0/24, we connect the router to the internet.
+ RUN:
+ ip route add 172.217.194.0/24 via 192.168.2.1
+ where 172.... is the internet IP
+ where 192.168.2.1 the router ip for network of hosts C,D
+ 
+ When you have too many ips to access on the internet. You can dedicate a particular router as a default gateway.
+ This way you dont have to add a route/door/gateway for every internet ip.
+ Therefore for any network that you dont kwn over the internet.
+ Run:
+ 
+ ip route add default via 192.168.2.1
+ or
+ 
+ ip route add 0.0.0.0 via 192.168.2.1 --> This way any ip on the internet will be reached and you have dedicated the router of hosts C,D Network as the default for internet connectivity.
+ 
+ In the future if no internet in the network, youll kwn where to start with troubleshooting...
+ 
+ You can also decide to have 2 routers linking the 2 networks..
+ Then dedicate one for internal connectivity and one for route/gateway to the internet.
+ 
+ 
+ 
+ SUMMARY BY CHAT GPT:::::::::::::::::
+ Your explanation provides a good overview of networking concepts, including how to set up connectivity between different network segments using a router or gateway. 
+ Here's a summary of your explanation:
+
+ 1. **Setting Up Hosts A and B**:
+    - Connect both hosts to a switch.
+    - Assign IP addresses within the same subnet (e.g., 192.168.1.10 for Host A and 192.168.1.11 for Host B) with the same CIDR notation.
+    - Verify connectivity by pinging one host from the other.
+
+ 2. **Setting Up Hosts C and D**:
+    - Connect these hosts to another switch.
+    - Assign IP addresses within the same subnet (e.g., 192.168.2.10 for Host C and 192.168.2.11 for Host D) with the same CIDR notation.
+    - Verify connectivity within this network by pinging one host from the other.
+
+ 3. **Introducing a Router**:
+    - Use a router to connect the two networks (A/B and C/D).
+    - Assign the router an IP address in each network segment (e.g., 192.168.1.1 for A/B and 192.168.2.1 for C/D).
+    - This router acts as the gateway between the two networks.
+
+ 4. **Configuring Routes**:
+    - To enable communication between the networks:
+      - On Host A/B: `ip route add 192.168.2.0/24 via 192.168.1.1`
+      - On Host C/D: `ip route add 192.168.1.0/24 via 192.168.2.1`
+    - These routes tell each host how to reach the other network through the router.
+
+ 5. **Internet Connectivity**:
+    - To provide internet access to the network of Hosts C/D:
+      - Connect the router to the internet.
+      - Add a route for the internet IP range: `ip route add 172.217.194.0/24 via 192.168.2.1`
+    - You can also set a default route to the router for general internet access: `ip route add default via 192.168.2.1`
+
+ 6. **Using Multiple Routers**:
+    - You can use multiple routers for different purposes, such as internal connectivity and internet routing.
+
+ Your explanation covers the fundamentals of setting up networks, routers, and routing configurations effectively. 
+ It's important to understand these concepts when dealing with network segmentation and interconnectivity.
+ 
+ 
+ HOW TO SETUP A LINUX HOST AS A ROUTER
+ 
+ When we use a linux machines say B to setup interconnectivity between 2 vms A and C, One of the machines say B will act as a router between the 2 vms A and C which are in 
+ a different network of diff subnets.
+ When we configure a route/gateway/door for the vm of A to send a packet to vm of C and vice versa.
+ With Your configuration, you have succesfully established connectivity b/c youv'e added routes for the hosts to send packets to eachother.
+ But by default in linux, packets are not forwarded from one interface to another..
+ packets received on eth0 on host B are not forwarded to elsewhere through eth1 on same host B which is acting as a router.
+ 
+ Weather a host can forward packets between interfaces is governed by the settings at cat /proc/sys/net/ipv4/ip_forward file.
+ by default it is set at 0, change it to 1 and see the pings go through.
+ 
+ 
+ You're absolutely correct, and I appreciate your clarification. Enabling IP packet forwarding in Linux is a crucial step when configuring a Linux host to act as a router.
+
+ To enable IP packet forwarding in Linux, you can set the value in the `/proc/sys/net/ipv4/ip_forward` file to `1`. You can do this using the `echo` command or by modifying the file directly.
+  Here's how:
+
+ ```bash
+ # Enable IP packet forwarding temporarily
+ echo 1 > /proc/sys/net/ipv4/ip_forward
+
+ # Enable IP packet forwarding persistently (across reboots)
+ echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
+ sysctl -p
+ ```
+
+ By setting the value to `1`, you tell the Linux kernel to forward packets between interfaces, allowing the Linux host (machine B) to act as a router for VMs A and C, as you described.
+
+ Thank you for highlighting this important step, as enabling IP packet forwarding is essential for the routing functionality of the Linux host.
+ 
+ 
+ 
+ 
+ 
+ MY SUMMARY:
+ 
+ 
+ ip link --> List and modify interfaces on the host
+ ip addr ---> List ip addresses assigned to the interfaces
+ ip addr add 192.168.1.10/24 dev eth0 --> Used Assign or set ip address on the interfaces
+ ip route or route ---> Used to view the door/routing table
+ ip route add 192.168.1.0/24 via 192.168.2.1  --> Used to add entries to the routing tables or create a door 4 packets to travel
+ cat /proc/sys/net/ipv4/ip_forward --> This file must be set to zero when using linux hosts as routers to enable packets to be sent through interfaces.
+ 
+ 
+ # Enable IP packet forwarding temporarily
+ echo 1 > /proc/sys/net/ipv4/ip_forward
+
+ # Enable IP packet forwarding persistently (across reboots)
+ echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
+ sysctl -p
+ 
+ 
+ Changes made by this changes are only valid till reboot, if you want it to persist, you must set them in the /etc/network/interfaces file
+ 
+ 
+ 
+ FROM GPT:
+ Your summary is mostly accurate, but there's a small detail to clarify. In Linux, network interface configurations can be done using various methods, 
+ and the specific method might vary based on the Linux distribution. The commands you mentioned are commonly used, 
+ but they are not typically used to set configurations in the `/etc/network/interfaces` file.
+
+ Here's a more detailed explanation:
+
+ 1. **`ip link`**: This command is used to display and manage network interfaces on the host. 
+ It can be used to list interfaces and change their state (e.g., bring them up or down). It doesn't directly configure IP addresses.
+
+ 2. **`ip addr`**: This command is used to display and manage IP addresses assigned to network interfaces. 
+ You can use it to view the currently assigned IP addresses and also to add or remove IP addresses from interfaces.
+
+ 3. **`ip addr add 192.168.1.10/24 dev eth0`**: This command assigns the IP address 192.168.1.10 with a subnet mask of /24 (255.255.255.0) to the `eth0` network interface. 
+ It sets the IP address temporarily, and these changes are not persistent across reboots.
+
+ To make network configuration changes persistent across reboots, you typically need to configure the network settings in the appropriate configuration files.
+  The `/etc/network/interfaces` file is commonly used in Debian-based distributions like Ubuntu for configuring network interfaces.
+
+ For example, to make the IP address assignment persistent, you would edit the `/etc/network/interfaces` file and add configuration lines like:
+
+ ```
+ auto eth0
+ iface eth0 inet static
+     address 192.168.1.10
+     netmask 255.255.255.0
+ ```
+
+ This configuration will ensure that the IP address for `eth0` is set to 192.168.1.10 with a subnet mask of 255.255.255.0 every time the system boots.
+
+ Keep in mind that the specific configuration files and methods may vary depending on the Linux distribution you are using.
+ 
+ 
+ 
+ 
+ extra read mine above explains it all though..
+ ............................................
+
+ IMPORTANT:
+
+ Your description of how to connect two computer systems (A and B) using a switch and configuring network interfaces is mostly correct. However, there are a few minor points to clarify and correct:
+
+ 1. You mentioned running the "ip link" command to create an interface on the host, which is not entirely accurate. The "ip link" command is typically used to manage existing network interfaces, not to create new ones. 
+ To create a new virtual network interface, you might use commands like "ifconfig" or "ip link add."
+
+ 2. Instead of assuming the network is of the IP 192.168.1.0, you should specify a network address and subnet mask. For example, if you're using a /24 subnet mask, you can say the network is 192.168.1.0/24.
+
+ 3. When assigning IP addresses to Host A and Host B, you correctly used the "ip addr add" command, but it's also a good practice to specify the network mask explicitly. So, the commands would look like this:
+
+    Host A: `ip addr add 192.168.1.10/24 dev eth0`
+    Host B: `ip addr add 192.168.1.11/24 dev eth0`
+
+ 4. You mentioned that with these steps, you have created an interface on the hosts and assigned CIDR to the hosts, which is correct. 
+ However, you may want to emphasize that these IP addresses must be unique within the network to avoid conflicts.
+
+ Overall, your explanation is on the right track, but it could benefit from a few clarifications and corrections as mentioned above.
+
+
+ MORE:
+
+ Yes, choosing an IP address for a host within the range of the network's IP address (within the same subnet) is a key step in enabling interconnectivity. 
+ When devices are on the same subnet and have IP addresses within the same range, they can communicate directly with each other without needing a router to reach devices on different subnets.
+
+ Here's a simplified breakdown of how it works:
+
+ 1. Devices within the same subnet: Devices with IP addresses within the same subnet can communicate with each other directly because they share the same network address and subnet mask. 
+ They can send packets to each other without the need for routing through a gateway or router.
+
+ 2. Devices on different subnets: If you have devices on different subnets, you would typically need a router or a layer 3 switch to route traffic between these subnets. 
+ The router or layer 3 switch will have interfaces in each subnet, and it knows how to forward packets between them.
+
+ So, when you choose IP addresses within the same subnet range for your hosts, they should be able to communicate directly on that subnet, 
+ assuming there are no other network configuration issues.
+ 
+ 
+
+ Prerequisite DNS:
+ 
+ What’s the difference bw hostname and domain name?
+ 
+ A "hostname" and a "domain name" are two related but distinct concepts in the context of computer networking and the Domain Name System (DNS):
+
+ 1. **Hostname**:
+    - A hostname is the name assigned to a specific device or computer on a network.
+    - It's typically a single word or a short, human-readable label used to identify that particular device within a local network.
+    - Hostnames are used for internal network communication and may not be globally unique.
+	 For example, on a home network, you might have multiple devices with hostnames like "laptop," "printer," or "smartphone."
+
+ 2. **Domain Name**:
+    - A domain name is a hierarchical, human-readable address used to identify resources on the internet.
+    - It consists of multiple parts, separated by periods (dots), with the top-level domain (TLD) being the rightmost part.
+	 Examples of TLDs include ".com," ".org," and ".net."
+    - A domain name represents a location or an organization on the internet and can be used for websites, email servers, and other online services.
+    - Domain names are globally unique and registered through domain registrars to ensure there are no conflicts.
+
+ Here's an example to illustrate the difference:
+ - **Hostname**: On your local network, you might have a computer with the hostname "my-laptop." This hostname is used to identify your laptop within your home network.
+ - **Domain Name**: On the internet, a website might have the domain name "www.example.com." 
+ This domain name represents a specific website on the worldwide web and is used to access that website from anywhere on the internet.
+
+ In summary, hostnames are used for local network identification and may not be unique globally, 
+ while domain names are used for internet resources and must be globally unique to ensure proper routing and identification on the web.
+ 
+ Illustration:
+ 
+ network---> 192.168.1.0/24
+ We have 2 computers on the same network, we call it system A <192.168.1.10> and system B <192.168.1.11>.
+ The 2 hosts can communicate with each since theyre on the same network.
+ You can ping system B from A using its IP address and vice versa.
+ 
+ Lets assume that system B has a DB application running in it and we would like to call system B db.
+ Going further, we would like to ping system B using the name db instead of it IP address.
+ 
+ We run: ping db and get an error message indicating that host A doesnt know any system by the name db.
+ 
+ How do we resolve this?
+ 
+ We have to tell system A that when i say db, that i mean system B IP 192.168.1.11
+ We do this by adding an entry in the cat >> /etc/hosts file in system A.
+ e.g:
+cat >> /etc/hosts
+192.168.1.11 db
+
+Now when you ping db, the ping goes through..
+
+The /etc/hosts file becomes the only source of truth for host A.
+But is it trully the only source of truth?? When you run hostname command on system B you get the result of node-02 but to system B its known as db.
+We can even trick system A to think that system B is known as www.google.com
+ e.g:
+cat >> /etc/hosts
+192.168.1.11 db
+192.168.1.11 www.google.com
+
+ping www.google.com goes through and youll get a response from system B.. But is the host B www.google.com??
+
+NB: we have mapped 2 different names to the ip of system IP, you can have as many names as you want.
+
+ping db
+ping www.google.com
+curl https://www.google.com
+You can even add Ip address of other servers and the names you want them to be known as in the /etc/hosts file.
+
+Translating hostname into IP addresses this way are called name resolution.
+
+When you have multiple systems say A,B,C,D,E,F etc..
+For A to talk to B,C,D,E... You will have to enter their ips and their hostnames or names you will want them to be known as in host A /etc/hosts file and the same is applicable to B,C,D,E,F .... when 
+they require to talk to A and all.
+
+This was how it was done in the past till the entries becomes so much and complex to maintain, if one hosts IP changes, youll have to update the ip in other hosts /etc/hosts file and vice versa.
+
+This was why DNS server was introduced..
+
+Instead of adding entries of every hosts in the /etc/hosts file. we create a file that contains the hostnames to ip mappings of all the hosts.
+Will store these entries into our DNS server. We then point the DNS server to each of the host and any host that needs to resolve a dns will lookup to the dns server.
+
+How do we point our hosts to the dns server?
+
+Every hosts has a dns configuration file at cat /etc/reslove.conf.
+Note: Our DNS server has an ip address, lets say 192.168.1.100
+
+In each of the host, we enter our dns server ip address in the /etc/reslove.conf as follows:
+
+nameserver 192.168.1.100
+
+We do this in all of the hosts. 
+This means that if a host needs to reslove a hostname, the request will go to our dns server on its ip 192.168.1.100 to lookup for the entries that matches it querys.
+
+Important:
+If any of the ip address of a host where to change, we update this only in the dns server entries and all host will be able to resolve the new ip address.
+
+A system is able to use hostname to ip mapping from a remote dns server and equally from /etc/hosts file locally.
+
+What if you have entries in /etc/hosts file and another in remote dns server?
+
+Example..
+
+192.168.1.112 test in /etc/hosts file and 192.168.1.113 in the dns server.
+
+The host will first look at the entries in the cat /etc/hosts file b4 checking the dns server..
+This characteristics is defined by the configuration in /etc/nsswitch.conf
+
+Open this file and change the order of dns resolution to first resolve to the dns server and if no entry is found then reslove to the cat /etc/hosts file
+example:
+
+hosts file dns change it to hosts dns file....
+
+What if you try to ping a server or a hostname/domain name that does not exist in either the cat /etc/hosts file  or nor in the dns server????
+
+Lets say ping www.facebook.com this will fail.
+But we can add a public server that exists on the internet that knows hostname to ip mapping of facebook.
+Google has a public dns server that serves publicly available domainnames or websites on the internet.
+The ip of this dns server is 8.8.8.8 we add this in our /etc/resolve.conf file in each hosts example.
+
+cat /etc/resolve.conf
+nameserver 192.168.1.100
+nameserver 8.8.8.8
+
+Now ping www.facebook.com and packets will be sent to the dns server which then resolves it to the ip address of the host hosting the facebook application.
+
+The problem is that we will have to add this nameserver 8.8.8.8 in the cat /etc/resolve.conf of all the hosts..
+
+Alternatively, we can make a change in our dns server to forward all unknown hostnames to the dns server on the internet owned by google that will resolve it to the ip of the host.
+
+eg.
+
+Forward All to 8.8.8.8
+
+
+Important:
+
+www.facebook.com
+www.google.com
+This is a domainname and its how ips translate to domain names that we can remember instead of having to type ip addresses..
+Domain name is used to group things 2geda
+
+.com -- TLD top level domain and it tells us the intent of the website
+. --> root domain 
+google --> domainname assigned to google
+
+www --> subdomain, it further helps in grouping things 2geda example
+maps.google.com , drive.google.com, hr.google.com, apps.google.com
+
+When you try to reach any of these domainname, say apps.google.com  internally your request first hits your org dns server..
+It doesnt kwn who apps or google is.. So it forwards your reqeust to the internet and with the help of multiple dns servers on the internet google will be resloved to the ip address hosting the google app.
+
+A root dns server "." looks at your request and forwards it to the dns server serving .com a .com dns server looks at your request and forwards you to google and google dns server provides you the IP 
+address of the server serving the apps application..
+
+In other to speed up future resolves, your org dns server might cache the results of the request .ie the IP address of the apps application for a few sec ensuring it does not have to go through
+the entire process eachtime...
+
+
+WHAT ABOUT MY ORGANIZATION?
+SAY WE HAVE
+mycompany.com
+subdomains as --> hr, pay, sales, www, mail for handling diff functions payroll app, mail application or hr for accessing hr application.
+all of these are configured in mycompany internal dns server..
+
+say we have entries like the below, 
+ 192.168.1.10 web.mycompany.com
+ 92.168.1.11 hr.mycompany.com
+192.168.1.10 mail.mycompany.com
+in our dns server and our endusers can reach our application server by pinging web.mycompany.com
+This is correct. However, we would like to ping web instead of typing the full name internally and get resolved to the ip address of the server serving the web application
+what do we do?
+
+You make an entry in your host in the /etc/resolve.conf file called:
+search and specify the domain name you want to append.
+e.g
+
+search mycompany.com
+
+ping web 
+it will add the rest in the output of the ping
+web.mycompany.com
+
+
+RECORD TYPES
+
+A ---> stores ip address to hostname
+AAAA --> stores ipv6 to hostname
+CNAME ---> stores hostname to hostnames
+
+
+Testing DNS resolution:
+
+ping is not the right tool for testing dns resolution...
+use:
+nslookup and dig
+use nslookup to query hostname from a dns server. It does not look at entries in the /etc/hosts files.
+nslookup only quries the dns server and not the entry in your local /etc/hosts file
+
+same for dig but outputs more results...
+
+
+
+
+MORE ON DNS:
+
+A "hostname" and a "domain name" are two related but distinct concepts in the context of computer networking and the Domain Name System (DNS):
+
+1. **Hostname**:
+   - A hostname is the name assigned to a specific device or computer on a network.
+   - It's typically a single word or a short, human-readable label used to identify that particular device within a local network.
+   - Hostnames are used for internal network communication and may not be globally unique. 
+   For example, on a home network, you might have multiple devices with hostnames like "laptop," "printer," or "smartphone."
+
+2. **Domain Name**:
+   - A domain name is a hierarchical, human-readable address used to identify resources on the internet.
+   - It consists of multiple parts, separated by periods (dots), with the top-level domain (TLD) being the rightmost part. Examples of TLDs include ".com," ".org," and ".net."
+   - A domain name represents a location or an organization on the internet and can be used for websites, email servers, and other online services.
+   - Domain names are globally unique and registered through domain registrars to ensure there are no conflicts.
+
+Here's an example to illustrate the difference:
+- **Hostname**: On your local network, you might have a computer with the hostname "my-laptop." 
+This hostname is used to identify your laptop within your home network.
+- **Domain Name**: On the internet, a website might have the domain name "www.example.com." 
+This domain name represents a specific website on the worldwide web and is used to access that website from anywhere on the internet.
+
+In summary, hostnames are used for local network identification and may not be unique globally,
+ while domain names are used for internet resources and must be globally unique to ensure proper routing and identification on the web.
+ 
+ 
+
+ Prerequisite – CoreDNS:
+
+
+ In the previous lecture we saw why you need a DNS server and how it can help manage name resolution in large environments with many hostnames 
+ and Ips and how you can configure your hosts to point to a DNS server. In this article we will see how to configure a host as a DNS server.
+
+ We are given a server dedicated as the DNS server, and a set of Ips to configure as entries in the server. There are many DNS server
+  solutions out there, in this lecture we will focus on a particular one – CoreDNS.
+
+ So how do you get core dns? CoreDNS binaries can be downloaded from their Github releases page or as a docker image. 
+ Let’s go the traditional route. Download the binary using curl or wget. And extract it. You get the coredns executable.
+ 
+
+
+ Run the executable to start a DNS server. It by default listens on port 53, which is the default port for a DNS server.
+
+ Now we haven’t specified the IP to hostname mappings. For that you need to provide some configurations. 
+ There are multiple ways to do that. We will look at one. First we put all of the entries into the DNS servers /etc/hosts file.
+
+ And then we configure CoreDNS to use that file. CoreDNS loads it’s configuration from a file named Corefile. 
+ Here is a simple configuration that instructs CoreDNS to fetch the IP to hostname mappings from the file /etc/hosts. When the DNS server is run, it now picks the Ips and names from the /etc/hosts file on the server.
+ 
+
+
+
+ Prerequisite Network Namespaces:
+
+ JUST FOR BASIC REFERNCE:
+ So if i understand clearly, if i choose a network of 192.168.1.0/20
+ This corresponds to 255.255.255.0
+ lets say i assign my network a subnet mask of /20
+
+ 192.168.1.0 ip will be reserved for the network which corresponds to 255.255.255.0
+
+ I can then assign ips from 192.168.1.1 to 192.168.1.254 ???
+
+
+
+ so the first 24 bits should be 1 and the rest 0
+
+ we have 8bit in 4 segment
+
+ 11111111 11111111 11111111 00000000  --> binary 
+ we convert this to decimal
+
+ 11111111 is = 255 in decimal
+ 11111111.   = 255
+ 11111111 =    255
+ 00000000 =  0 
+
+ 255.255.255.0 will be for a network of notation as 24
+
+ so if you decide to go with a notation cidr of /24 and chooses the ip
+
+ 192.168.1.0/24 or 254.254.254.0/24
+
+ You can only assign ips between 192.168.1.1 to 254
+
+
+
+ for 20 cidr notation
+
+ 11111111 11111111 11110000 00000000 binary
+
+ to decimal is 
+
+ 255 255 240 0
+
+ lets say we want a network of 192.168.240.0
+
+
+ 192.168.241.1
+ 192.168.242.1
+ 192.168.243.1
+ 192.168.244.1
+ 192.168.245.1
+ 192.168.246.1
+ 192.168.247.1
+ 192.168.254.1
+ 192.168.254.2
+
+ https://www.binaryhexconverter.com/binary-to-decimal-converter
+
+ Ref:
+ https://chat.openai.com/c/a511822e-40a3-441e-aa88-531b757fb423
+ 
+ 
+
+ Prerequisite Network Namespaces:
+ 
+ Network namespaces in linux. Containers are separated from the underlying hosts using namespaces.
+ When you created a container, you want to make sure its isolated and cannot see other process running on the host or any other containers.
+ We create a namespace for the container to run. However, the underlying host has visibility on the container and processes running inside of it.
+ 
+ Running a command ps -aux from the host will show you processes running on the host, including the container with a user ID 1122 or any ramdom number.
+ Running the same command inside the container shows you that the process ID of the process in the container is 1 or any random number different from that of the host.
+ 
+ This is how network namespaces works.
+ 
+ When it comes to networking our host has interfaces that connects to the LAN, our host has routing and ARP tables that has information about the rest of the networks.
+ We want to see all of those details from the container..
+ 
+ When a container is created, we create a network namespace for it so it will have no visibility to any network related information on the host..
+ Within the namespaces, the container has its own interfaces and Arp tables..
+ 
+ Creating New Network Namespaces in linux:
+ RUN:
+ 
+ ip netns add red --> Creates a network namespace called red. netsns means network namespace
+ ip netns add blue --> creates a blue namespace.
+ ip netns --> lists the namespaces created.
+ 
+ More Commands:
+ To see the interfaces on my host RUN:
+ ip link ---> You will see the loopback interface and an eth0 interface on the host.
+ 
+ How can we view the interfaces on network namespaces we have created..
+ 
+ ip netns exec red ip link 
+ ip -n red link ---> Running the command inside the namesapce
+ ..
+ ip netns exec blue ip link 
+ 
+ These commands execute the ip link command within the specified network namespace, allowing you to see the 
+ list of network interfaces that exist within that namespace. This is useful for inspecting and managing network configurations within isolated namespaces.
+ 
+ Listing the Interfaces on the network namespace we created will show you only the loopback interface. You will not see the eth0 interface.
+ 
+ The same is true for the routing table and ARP tables.
+ 
+  ip route --> host
+  ip netns exec blue ip route --> no route
+  ip netns exec red ip route --> no route
+
+  arp --> host 
+  ip netns exec blue arp --> no visibity on other namespace linked to it
+  ip netns exec red arp
+  
+  
+  As you know, the network namespaces has no interface, no visibility on the host network.
+  Lets establish connectivity bw the network namespaces.
+   
+  We connect both namespaces using a virtual cable/pipe
+  RUN:
+  ip link add netns red veth-red type veth peer name veth-blue netns blue --> Creates the cable and places one end of the cable to network namespace red and the other on blue to link the 2 namespaces.
+  
+  ip link add veth-red type veth peer name veth-blue --> This simply creates the cable called veth-red paired with veth-blue. But you have to link it to the network namespaces.
+  ip link set veth-red nestns red --> This attachs one end of the pipe to red
+  ip link set veth-blue nestns blue --> This attachs one end to blue
+  
+  This way You have connected the 2 namespaces using Pipe/cable..
+  
+  Now we have to assign ips to the network namespaces:
+  RUN:
+  ip -n blue addr add 192.168.15.1 dev veth-blue
+  ip -n red addr add 192.168.15.2 dev veth-red
+  
+  RUN:  ip netns exec blue ip link 
+  Youll see that the interfaces veth-blue and veth-red are down.
+  Bring up the interfaces using:
+  
+  ip -n blue link set veth-blue up
+  ip -n red link set veth-red up 
+  
+  Now we are good...
+  Try pinging the red namespace from the blue network namespace.
+  
+  ip netns exec blue ping 192.168.15.2 --> This ping will go through and return a feedback...
+  ip netns exec blue arp --> shows you that it identify its red neigbor on 192.168.15.2
+  ip netns exec red arp --> shows you that it identify its blue neigbor on 192.168.15.1
+  
+  RUN:
+  arp --> This on the host.
+  You will see that the host has no idea of the network namespaces and their interfaces.
+  
+  This works for us, we have successfully isolated our network from the hosts and established connectivity bw 2 namespaces..
+  
+  What happens when we have 4 namespaces or more???
+  How do you enable all of them to communicate with each other?
+  
+  In this case just like in the previous networking notes b4 this, we create a switch inside of the host to establish links to the 4 namespaces..
+  This switch will have an IP range or subnet from which the network namespace will be assigned an ip.
+  
+  How do you create a switch/network inside of a host?
+  There are several solutions for this such as.
+  1. Open Vswitch
+  2. Linux Bridge
+  
+  RUN:
+  ip link add v-net-0 type bridge
+  This network/switch ip will be 192.168.15.0/24
+  
+  This creates a switch/network/interface on the host that will be used to link the namespaces.
+  To the namespaces its a switch to connect them
+  To the host is just another interface on it.
+  
+  Run: ip link on the host, you will see that the v-net-0 interface is down.
+  Run: ip link set v-net-0 up   ---> This brings up the interface.
+  
+  
+  OUR GOAL:
+  we will be connecting the namespaces 2geda using the bridge network v-net-0 we created.
+  We will not be creating a pipe/cable like we did previously when we had 2 namespaces. Our requirements has changed and we have more namespaces reason 4 the bridge.
+  
+  1. We have to then delete the pipe we used to link the blue and red namespaces.
+  RUN:
+  
+  ip -n red link delete veth-red  --> This deletes the cable/pipe used to link the blue namespace to the red.
+  NB: When you delete one side say veth-red, the other end veth-blue used to connect the blue namespace gets deleted automatically since theyre pairs..
+  You do not need to run ip -n blue link delete veth-blue again!!!
+  
+  NOW WE CAN CONNECT OUR NAMESPACES TO THE BRIDGE NETWORK.
+  
+  We have 4 namespaces blue,red,black and white
+  
+  Create a cable to connect the blue namespace to the bridge network, do the same for red, black and white..
+  RUN:
+   ip link add veth-red type veth peer name veth-red-br -- The other end veth-red-br will be the end that will be used to link to the bridge switch.
+   ip link add veth-blue type veth peer name veth-blue-br
+   ip link add veth-black type veth peer name veth-black-br
+   ip link add veth-white type veth peer name veth-white-br
+   
+   ip link set veth-red nestns red --> This attachs one end of the pipe to red namespace
+   To attach the other end to the bridge v-net-0 network:
+   ip link set veth-blue-br master v-net-0 --> This attachs one end to blue
+   
+   also for the blue namespace, connect it to the v-net-0 bridge network
+   ip link set veth-blue netns blue --> link one end of the pipe to blue namespace
+   ip link set veth-blue-br master v-net-0 --> links the other end of pipe to bridge v-net-0 network
+   
+   we have create a pipe/cable thats linked blue namespace to v-net-0 and also for the red, do this for the rest 2 white and black namespaces.
+   
+   WHAT NEXT:
+   
+   We set ip addresses on the namespaces using the ip addr command:
+
+   ip -n blue addr add 192.168.15.1 dev veth-blue
+   ip -n red addr add 192.168.15.2 dev veth-red
+   
+   We do the same for the other 2 white and black..
+   
+  
+   RUN:  ip netns exec blue ip link 
+   Youll see that the interfaces veth-blue and veth-red,veth-black,veth-white are down.
+   Bring up the interfaces using:
+  
+   ip -n blue link set veth-blue up
+   ip -n red link set veth-red up 
+   
+   We do the same for the other 2 white and black..
+   
+   This way we have established connectivity bw our namespaces and they can both communicate with each other....
+   
+   Important:
+   Our host has a ip, 192.168.1.2.
+   Lets ping the namespaces from our host
+   
+   ping 192.168.15.1
+   
+   This will show unreachable, you are unable to reach the namespaces from the host..
+   How can we reach the namespaces from the host? remember the when you run the ip link command from the host, youll see the v-net-0 interface from the host.
+   We said that the v-net-0 interface is just another interface on the host and assigning it an Ip address within the same cidr range will establish a communication bw the namespaces and the host.
+   
+   Assign an ip address of 192.168.15.5 to the v-net-0 interface
+   
+   run:
+   ip addr add 192.168.15.1/24 dev v-net-0 --> with this we will be able to ping the blue namespace.
+   ping 192.168.15.1
+   goes through and returns a response.. Sends a packet, it receives the packet and returns back a response..
+ 
+  
+  
+  
+  
+  
+ 
+ 
+ 
+ 
+
+
+
+
+
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+ 
+ 
