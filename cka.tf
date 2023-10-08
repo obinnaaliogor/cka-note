@@ -11,9 +11,14 @@ Certification Tip!
 
 Here’s a tip!
 
-As you might have seen already, it is a bit difficult to create and edit YAML files. Especially in the CLI. During the exam, you might find it difficult to copy and paste YAML files from browser to terminal. Using the kubectl run command can help in generating a YAML template. And sometimes, you can even get away with just the kubectl run command without having to create a YAML file at all. For example, if you were asked to create a pod or deployment with specific name and image you can simply run the kubectl run command.
+As you might have seen already, it is a bit difficult to create and edit YAML files. 
+Especially in the CLI. During the exam, you might find it difficult to copy and paste YAML files from browser to terminal.
+ Using the kubectl run command can help in generating a YAML template. 
+ And sometimes, you can even get away with just the kubectl run command without having to create a YAML file at all.
+  For example, if you were asked to create a pod or deployment with specific name and image you can simply run the kubectl run command.
 
-Use the below set of commands and try the previous practice tests again, but this time try to use the below commands instead of YAML files. Try to use these as much as you can going forward in all exercises
+Use the below set of commands and try the previous practice tests again, but this time try to use the below commands instead of YAML files. 
+Try to use these as much as you can going forward in all exercises
 
 Reference (Bookmark this page for exam. It will be very handy):
 
@@ -75,9 +80,11 @@ To set the right version of API set the environment variable ETCDCTL_API command
 
 export ETCDCTL_API=3
 
-When the API version is not set, it is assumed to be set to version 2. And version 3 commands listed above don’t work. When API version is set to version 3, version 2 commands listed above don’t work.
+When the API version is not set, it is assumed to be set to version 2. And version 3 commands listed above don’t work. 
+When API version is set to version 3, version 2 commands listed above don’t work.
 
-Apart from that, you must also specify the path to certificate files so that ETCDCTL can authenticate to the ETCD API Server. The certificate files are available in the etcd-master at the following path. We discuss more about certificates in the security section of this course. So don’t worry if this looks complex:
+Apart from that, you must also specify the path to certificate files so that ETCDCTL can authenticate to the ETCD API Server. 
+The certificate files are available in the etcd-master at the following path. We discuss more about certificates in the security section of this course. So don’t worry if this looks complex:
 
 --cacert /etc/kubernetes/pki/etcd/ca.crt
 --cert /etc/kubernetes/pki/etcd/server.crt
@@ -92,7 +99,8 @@ kubectl exec etcd-controlplane -n kube-system -- sh -c "ETCDCTL_API=3 etcdctl ge
 
 Certification Tips – Imperative Commands with Kubectl
 
-While you would be working mostly the declarative way – using definition files, imperative commands can help in getting one time tasks done quickly, as well as generate a definition template easily. This would help save considerable amount of time during your exams.
+While you would be working mostly the declarative way – using definition files, imperative commands can help in getting one time tasks done quickly, as well as generate a definition template easily. 
+This would help save considerable amount of time during your exams.
 
 Before we begin, familiarize with the two options that can come in handy while working with the below commands:
 
@@ -169,7 +177,8 @@ Create a Service named nginx of type NodePort to expose pod nginx’s port 80 on
 
 kubectl expose pod nginx --type=NodePort --port=80 --name=nginx-service --dry-run=client -o yaml
 
-(This will automatically use the pod’s labels as selectors, but you cannot specify the node port. You have to generate a definition file and then add the node port in manually before creating the service with the pod.)
+(This will automatically use the pod’s labels as selectors, but you cannot specify the node port. 
+You have to generate a definition file and then add the node port in manually before creating the service with the pod.)
 
 Or
 
@@ -177,7 +186,8 @@ kubectl create service nodeport nginx --tcp=80:80 --node-port=30080 --dry-run=cl
 
 (This will not use the pods labels as selectors)
 
-Both the above commands have their own challenges. While one of it cannot accept a selector the other cannot accept a node port. I would recommend going with the `kubectl expose` command. If you need to specify a node port, generate a definition file using the same command and manually input the nodeport before creating the service.
+Both the above commands have their own challenges. While one of it cannot accept a selector the other cannot accept a node port. I would recommend going with the `kubectl expose` command. 
+If you need to specify a node port, generate a definition file using the same command and manually input the nodeport before creating the service.
 Reference:
 
 https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands
@@ -285,9 +295,11 @@ Remember, you CANNOT edit specifications of an existing POD other than the below
     spec.activeDeadlineSeconds
     spec.tolerations
 
-For example you cannot edit the environment variables, service accounts, resource limits (all of which we will discuss later) of a running pod. But if you really want to, you have 2 options:
+For example you cannot edit the environment variables, service accounts, resource limits (all of which we will discuss later) of a running pod.
+ But if you really want to, you have 2 options:
 
-1. Run the kubectl edit pod <pod name> command.  This will open the pod specification in an editor (vi editor). Then edit the required properties. When you try to save it, you will be denied. This is because you are attempting to edit a field on the pod that is not editable.
+1. Run the kubectl edit pod <pod name> command.  This will open the pod specification in an editor (vi editor). Then edit the required properties. 
+When you try to save it, you will be denied. This is because you are attempting to edit a field on the pod that is not editable.
 
 A copy of the file with your changes is saved in a temporary location as shown above.
 
@@ -316,7 +328,9 @@ Then create a new pod with the edited file
 kubectl create -f my-new-pod.yaml
 Edit Deployments
 
-With Deployments you can easily edit any field/property of the POD template. Since the pod template is a child of the deployment specification,  with every change the deployment will automatically delete and create a new pod with the new changes. So if you are asked to edit a property of a POD part of a deployment you may do that simply by running the command
+With Deployments you can easily edit any field/property of the POD template. 
+Since the pod template is a child of the deployment specification,  with every change the deployment will automatically delete and create a new pod with the new changes. 
+So if you are asked to edit a property of a POD part of a deployment you may do that simply by running the command
 
 kubectl edit deployment my-deployment
 
@@ -469,11 +483,14 @@ They comm bw each using localhost.
  
  InitContainers:
 
- In a multi-container pod, each container is expected to run a process that stays alive as long as the POD’s lifecycle. For example in the multi-container pod that we talked about earlier that has a web application and logging agent, both the containers are expected to stay alive at all times. The process running in the log agent container is expected to stay alive as long as the web application is running. If any of them fails, the POD restarts.
+ In a multi-container pod, each container is expected to run a process that stays alive as long as the POD’s lifecycle. 
+ For example in the multi-container pod that we talked about earlier that has a web application and logging agent, both the containers are expected to stay alive at all times. 
+ The process running in the log agent container is expected to stay alive as long as the web application is running. If any of them fails, the POD restarts.
 
  
 
- But at times you may want to run a process that runs to completion in a container. For example a process that pulls a code or binary from a repository that will be used by the main web application. That is a task that will be run only one time when the pod is first created. Or a process that waits for an external service or database to be up before the actual application starts. That’s where initContainers comes in.
+ But at times you may want to run a process that runs to completion in a container. For example a process that pulls a code or binary from a repository that will be used by the main web application. 
+ That is a task that will be run only one time when the pod is first created. Or a process that waits for an external service or database to be up before the actual application starts. That’s where initContainers comes in.
 
  
 
@@ -537,9 +554,14 @@ They comm bw each using localhost.
 
 	 Self Healing Applications
 
-	 Kubernetes supports self-healing applications through ReplicaSets and Replication Controllers. The replication controller helps in ensuring that a POD is re-created automatically when the application within the POD crashes. It helps in ensuring enough replicas of the application are running at all times.
+	 Kubernetes supports self-healing applications through ReplicaSets and Replication Controllers.
+	  The replication controller helps in ensuring that a POD is re-created automatically when the application within the POD crashes. 
+	  It helps in ensuring enough replicas of the application are running at all times.
 
-	 Kubernetes provides additional support to check the health of applications running within PODs and take necessary actions through Liveness and Readiness Probes. However these are not required for the CKA exam and as such they are not covered here. These are topics for the Certified Kubernetes Application Developers (CKAD) exam and are covered in the CKAD course.
+	 Kubernetes provides additional support to check the health of applications running within PODs and take necessary actions through Liveness and Readiness Probes.
+	  However these are not required for the CKA exam and as such they are not covered here. 
+	  
+	  These are topics for the Certified Kubernetes Application Developers (CKAD) exam and are covered in the CKAD course.
 	 
 	 
 
@@ -555,7 +577,8 @@ They comm bw each using localhost.
 	 When you drain a node, the nodes are marked unschedulable and  cordoned. 
 	 This means no pod will be scheduled on that node till you remove the restrictions.
 	 Run:
-	 kubectl uncordon node-0 to make the node available to receive pods on it, however pods running on that node b4 it was drained dont automatically fallback. only new workloads can now be scheduled on the node.
+	 kubectl uncordon node-0 to make the node available to receive pods on it, however pods running on that node b4 it was drained dont automatically fallback. 
+	 only new workloads can now be scheduled on the node.
 	 
 	 Important:
 	 kubectl cordon node-1
@@ -816,7 +839,9 @@ They comm bw each using localhost.
 		 
 		 NB:
 		 
-		 When restoring an etcd cluster using `etcdctl snapshot restore`, you generally do not need to specify the `--cert`, `--key`, and `--cacert` options because the etcd server is typically not running when you are performing a snapshot restore. The `--endpoints` option is also not necessary in this context because the etcd server is not running.
+		 When restoring an etcd cluster using `etcdctl snapshot restore`, you generally do not need to specify the `--cert`, `--key`, and `--cacert` options 
+		 because the etcd server is typically not running when you are performing a snapshot restore. The `--endpoints` option is also not necessary 
+		 in this context because the etcd server is not running.
 
 		 Here is a simplified version of the `etcdctl snapshot restore` command:
 
@@ -3643,7 +3668,7 @@ In summary, hostnames are used for local network identification and may not be u
  Prerequisite Network Namespaces:
  
  Network namespaces in linux. Containers are separated from the underlying hosts using namespaces.
- When you created a container, you want to make sure its isolated and cannot see other process running on the host or any other containers.
+ When you create a container, you want to make sure its isolated and cannot see other process running on the host or any other containers.
  We create a namespace for the container to run. However, the underlying host has visibility on the container and processes running inside of it.
  
  Running a command ps -aux from the host will show you processes running on the host, including the container with a user ID 1122 or any ramdom number.
@@ -3687,7 +3712,7 @@ In summary, hostnames are used for local network identification and may not be u
   ip netns exec red ip route --> no route
 
   arp --> host 
-  ip netns exec blue arp --> no visibity on other namespace linked to it
+  ip netns exec blue arp --> no visibity on other namespaces
   ip netns exec red arp
   
   
@@ -3699,8 +3724,8 @@ In summary, hostnames are used for local network identification and may not be u
   ip link add netns red veth-red type veth peer name veth-blue netns blue --> Creates the cable and places one end of the cable to network namespace red and the other on blue to link the 2 namespaces.
   
   ip link add veth-red type veth peer name veth-blue --> This simply creates the cable called veth-red paired with veth-blue. But you have to link it to the network namespaces.
-  ip link set veth-red nestns red --> This attachs one end of the pipe to red
-  ip link set veth-blue nestns blue --> This attachs one end to blue
+  ip link set veth-red nestns red --> This attachs one end of the pipe to red namespace
+  ip link set veth-blue nestns blue --> This attachs one end to blue namespace
   
   This way You have connected the 2 namespaces using Pipe/cable..
   
@@ -3754,7 +3779,7 @@ In summary, hostnames are used for local network identification and may not be u
   
   OUR GOAL:
   we will be connecting the namespaces 2geda using the bridge network v-net-0 we created.
-  We will not be creating a pipe/cable like we did previously when we had 2 namespaces. Our requirements has changed and we have more namespaces reason 4 the bridge.
+  We will not be creating a pipe/cable like we did previously when we had 2 namespaces. Our requirements has changed and we have more namespaces this is the reason for the bridge network.
   
   1. We have to then delete the pipe we used to link the blue and red namespaces.
   RUN:
@@ -3861,7 +3886,7 @@ In summary, hostnames are used for local network identification and may not be u
    You no longer get an unreachable msg from the command but you dont get response from the network..
    This is b/c the outside network does not know about the internal bridge network and ips.
    How do we solve this?
-   We need NAT enabled on our host acting as a gateway so that that it can send msgs to the LAN in its own name with its own address. \(since the LAN knows/is linked our host)\
+   We need NAT enabled on our host acting as a gateway so that that it can send msgs to the LAN in its own name with its own address. \(since the LAN knows/is linked to our host)\
    
    We use the iptables to add NAT functionality to our host..
    RUN:
@@ -3950,7 +3975,7 @@ In summary, hostnames are used for local network identification and may not be u
 	We add portforwarding options using iptable rule to say any traffic coming from port 80 on the localhost is to be forwarded to port 80 on the IP assigned to the blue namespace.
 	
 	iptables -t NAT -A PREROUTING --dport 80 --to-destination 192.168.15.1:80 -J DNAT
-	No ping 192.168.15.1 from the external host:
+	Now ping 192.168.15.1 from the external host:
 	This will give you a response..
 	
 	MORE ON THE COMMAND:
@@ -4000,8 +4025,8 @@ IMPORTANT:
 	 2. The host network
 	 3. The bridge network
 	 
-	 1. The none network: When you run containers using this network, they're isolated from each other and are not part of any network, this containers cannot talk to the outside world..
-	 This containers cannot be accessed also from the outside..
+	 1. The none network: When you run containers using this network, they're isolated from each other and are not part of any network, these containers cannot talk to the outside world..
+	 These containers cannot be accessed also from the outside..
 	 
 	 2. The host network: The container is attached to the host network and there is no network isolation bw the container and the host.
 	 If you deploy a web application on port 80, the web application is available on port 80 on the host.
@@ -4030,7 +4055,7 @@ IMPORTANT:
 	 
 	 So the interface on the host, docker0 is assigned an ip of 172.17.0.1 
 	 Run:
-	 ip addr comand on the host --> THis will show you the ip address of the docker0 interface..
+	 ip addr comand on the host --> This will show you the ip address of the docker0 interface..
 	 
 	 Whenever a container is created docker creates a network namespace for it.
 	 Run:
@@ -4057,12 +4082,12 @@ IMPORTANT:
 	 run ip link command on the host --> You will also see the one end of the pipe/cable/ that was attached to the docker0 interface. (vethbb1c...@if7)
 	 RUN: ip netns exec <name-of-the-namespace-or-numbers> ip link --> This will show you the other end of the pipe/cable attached to the namespace. (eth0@if8)
 	 
-	 NB They end with odd numbers and even numbers who you look closely at the pipes/cables..
+	 NB They end with odd numbers and even numbers when you look closely at the pipes/cables..
 	 The interface/namespace also gets an ip address assigned to it.
 	 You can see this by running, 
 	 ip netns exec <namespace name> ip addr
 	 
-	 This will show you the ip assigned to the interface/namespace/container and this is also reffered to as the container ip.
+	 This will show you the ip assigned to the interface/namespace/container and this is also referred to as the container ip.
 	 This same process is repeated by docker eachtime a container is created..
 	 Say we have multiple containers, docker follows this pattern and the containers can now talk to each other
 	 
@@ -4070,8 +4095,8 @@ IMPORTANT:
 	 PORT MAPPING:
 	 
 	 Lets say the container we deployed is an nginx container running on port 80 on the namespace.
-	 Other containers cannot access this container except theyre in the network.
-	 But the host itself can access this container.
+	 Other containers cannot access this container except theyre in the same network.
+	 But the host itself can access these containers.
 	 
 	 Lets say you try to access the container from the docker host on port 80:
 	 
@@ -4130,11 +4155,316 @@ IMPORTANT:
 	For example, if you want to access a web server running inside a Docker container on port 80, you can configure this rule to forward traffic from port 8080 on the host to port 80 inside the container.
 
 	The command to list the rules in the NAT table (`iptables -nVL -t NAT`) is useful for inspecting and verifying the configured rules, including Docker-related rules for network address translation.
+	
+
+
+
+	Prerequisite CNI:
+	On network name spaces in Linux:
+	STEPS:
+	1. Create Network Namespace
+	2. Create Bridge Network/interface
+	3. Create VETH pairs (Pipe,Virtual Cable)
+	4. Attach Veth to Namespace
+	5. Attach other Veth to Bridge
+	6. Assign IP Addresses
+	7. Bring the Interfaces UP
+	8. Enable NAT - IP Masquerade
+
+
+	We also Saw how Docker did it using the bridge option. It was the same way just that it uses diff naming pattern:
+
+	On network name space in linux by Docker:
+	STEPS:
+	1. Create Network Namespace
+	2. Create Bridge Network/interface
+	3. Create VETH pairs (Pipe,Virtual Cable)
+	4. Attach Veth to Namespace
+	5. Attach other Veth to Bridge
+	6. Assign IP Addresses
+	7. Bring the Interfaces UP
+	8. Enable NAT - IP Masquerade
+	 
+	The same pattern is been adopted by other container orchestrators like MESOS,RKT,K8S.
+	
+	What is CNI?
+
+	Now about CNI, it’s a set of standards that must be adhered by network solutions in other for it to work with Kubernetes,MESOS,RKT etc without having to modify or change the k8s source code right? 
+
+
+	Yes, that's correct! The Container Network Interface (CNI) is a set of standards and specifications that network solutions must 
+	adhere to in order to work with Kubernetes seamlessly, without needing to modify or change the Kubernetes source code. 
+	CNI provides a standardized way for network plugins to configure and manage networking for pods within a Kubernetes cluster.
+
+	Key points about CNI:
+
+	1. **Standardized Interface:** CNI defines a standardized interface and set of conventions that network plugins can follow. 
+	This standardization ensures that network solutions can be used interchangeably with Kubernetes, as long as they adhere to the CNI specification.
+
+	2. **Flexibility:** Because Kubernetes relies on the CNI interface, it can work with a wide range of network plugins. 
+	Different plugins, such as Calico, Flannel, Weave, and more, can be used to meet specific networking requirements without altering Kubernetes itself.
+
+	3. **No Kubernetes Source Code Changes:** Kubernetes does not need to be modified to support different network solutions, thanks to CNI. 
+	This separation of concerns allows for easier integration and maintenance of Kubernetes clusters with diverse networking needs.
+
+	In summary, CNI serves as a standardized bridge between Kubernetes and network plugins, enabling Kubernetes to remain agnostic 
+	about the specific networking technology being used while allowing users to choose the network solution that best fits their requirements.
+	This design philosophy promotes interoperability and simplifies the management of networking in Kubernetes clusters.
+	
+	Important:
+	
+	Instead of each Network solutions working separately and developing the same solutions multiple times, why not create a single standard approach that everyone can follow?
+	So we take all the ideas from diff network solutions and move all of the networking portions of it into a single code.
+	Since this is for the bridge network we call it bridge..
+	So we develop a script that runs and performs a task to get the container attached to a bridge network.
+	
+	The script will impliment these portions:
+	2. Create Bridge Network/interface
+	3. Create VETH pairs (Pipe,Virtual Cable)
+	4. Attach Veth to Namespace
+	5. Attach other Veth to Bridge
+	6. Assign IP Addresses
+	7. Bring the Interfaces UP
+	8. Enable NAT - IP Masquerade
+	
+	Once the script is created, This command is ran to add the conatiner to a network..
+	
+	bridge add <cid> /var/run/netns/namespace
+	
+	NB: cid = namespace, so you must use the name of the conatiner as the name of the namespace.
+	
+	Say you want to create your own network solution.. How do you know that container runtimes or orchestrators like k8s, rkt, mesos will support it?
+	That is where CNI comes in to pay. You must develop that solution using CNI standard for it to work with orchestrators that support CNI.
+	
+	CNI STANDARDS FOR CONTAINER RUNTIMES OR ORCHESTRATORS:
+	......................................................
+	1. Container Runtimes must create network namespace
+	2. Indentify network the container must attach to
+	3. Container Runtime to invoke Network Plugin (bridge) when container is ADDed
+	4. Container Runtime to invoke Network Plugin (bridge) when container is DELeted
+	5. JSON format of the Network configuration
+	
+	
+	CNI STANDARDS FOR NETWORK PLUGIN/NETWORK SOLUTIONS
+	-------------------------
+	1. Must support command line arguments ADD/DEL/CHECK
+	2. Must support parameters container id, network ns etc
+	3. must manage ip address assignment to pods
+	4. must return results in a specific format.
+	
+	
+	CNI COMES WITH A SET OF SUPPORTED PLUGINS ALREADY.
+	When i say plugin, it also means network solutions. e.g.
+	Bridge, vlan, ipvlan, macvlan,windows, dhcp,host-local.
+	
+	There are other plugin available from third party org such as.
+	flannel, weaveworks, vmware nxs, calico, cilium any of these solutions follows cni standards and can be used for container runtimes that are onboard with cni e.g k8s,rkt,mesos.
+	
+	Important:
+	Docker a container runtime does not impliment CNI, Docker has its own set of standard called Container Network Model(CNM) which aims at solving networking challenges.
+	This is similar to CNI but with minor differnces. Due to this minor differnces, you cant run a docker conatiner and specify that the plugin to use is cni-bridge
+	
+	e.g docker run --network cni-bridge nginx ---> You cant do this...
+	That does not mean you cant run a docker container with CNI-BRIDGE Plugin.
+	
+	To use docker with CNI compliant plugin like bridge. Run the docker container with a none network and manually invoke the bridge plugin..
+	example:
+	
+	docker container run --network=none nginx
+	
+	bridge add <cid> /var/run/netns/namespace
+	
+	Important: With the above method you'll run docker container using CNI-bridge plugin.
+	This is also the way kubernetes does it, k8s first creates a container on the none network.
+	It then invokes the configured cni plugins. Follows CNI standards.
+	
+	
+
+	Cluster Networking: Networking configurations on the master and worker nodes in the k8s cluster...
+	
+	https://kubernetes.io/docs/reference/networking/ports-and-protocols/
+	
+	Explore the various port that must be opened in your k8s cluster setup using the above link.
+	Follow the best practice, the worker, node and master node must have a unique name,Mac addresses, ethernet interface and must be connected to an external network.
+	...
+	
+	
+
+	Important Note about CNI and CKA Exam
+
+	An important tip about deploying Network Addons in a Kubernetes cluster.
+
+	In the upcoming labs, we will work with Network Addons. This includes installing a network plugin in the cluster. 
+	While we have used weave-net as an example, please bear in mind that you can use any of the plugins which are described here:
+
+	https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+	https://kubernetes.io/docs/concepts/cluster-administration/networking/#how-to-implement-the-kubernetes-networking-model
+
+	In the CKA exam, for a question that requires you to deploy a network addon, unless specifically directed, you may use any of the solutions described in the link above.
+
+	However, the documentation currently does not contain a direct reference to the exact command to be used to deploy a third party network addon.
+
+	The links above redirect to third party/ vendor sites or GitHub repositories which cannot be used in the exam. 
+	This has been intentionally done to keep the content in the Kubernetes documentation vendor-neutral.
+	
+	COMMANDS:
+	
+	netstat -plnt
+	ip addr show etho
+	ip addr show type bridge
+	
+	
+	
+	
+
+     Pod Networking:
+	 Kubernetes networking model:
+1. Every pod should have an IP address
+2. Every pod should be able to communicate with every other pod in the same node
+Every pod should be able to communicate with every other pod on the other nodes without NAT
+
+Important information: The ip address that will be assigned to the bridge interface or the docker0 interface or the v-net-0 interface must be from the range of ip of the source network..
+
+What better way to ensure pods communication accross nodes without having to add route for all created pods one by one on each server for one pod to talk to a pod in a diff node.
+
+1. A better solution is to do that on a router if you have one on your network and point all host to use the router as the default gateway.
+
+e.g
+NETWORK                     GATEWAY
+           
+source network (bridge).     IP OF THE HOST1 or node
+source network (bridge).     IP OF THE HOST1
+source network (bridge).     IP OF THE HOST2
+
+With this you can manage route of network via the router..
+
+We created a script that execute in each node manully to achive our goal.
+But we do not wantt to be running these scripts manually each time a pod is created.
+We want to automate it.. What do we do??
+
+THIS IS WHERE CNI COMES IN AND ACTS AS THE MIDDLEMAN...
+CNI tells k8s this is how you should call/invoke your script!!
+CNI tells us the network solution, this is how our script should look like...
+
+The kubelet on each node is responsible for creating of pods and once a container is created the kubelet looks at the cni configuration passed as a 
+--cni-conf-dir=/etc/cni/net.d command line argument when it was run.
+it then looks at the cni bin dir --cni-bin-dir=/etc/cni/bin
+It identifies our script name and executes it.
+
+./net-script.sh add <cid> <namespace>
+	
+	
+	
+
+CNI in kubernetes:
+
+How and where do we specify the network plugins for k8s to use or invoke them??
+The CNI plugin must be invoke by the component in kubernetes responsible for creating the containers..
+That component must invoke the appropriate network plugin once the container is created...
+CNI plugin is configured on the kubelet on each node in the cluster
+
+Check the kubelet conf file to see the options passed to enable it invoke the cni plugin.
+--cni-conf-dir=/etc/cni/net.d ---> has the configuration file, if theyre many, it will kubelet will choose in aphabetical order..
+--cni-bin-dir=/etc/cni/bin or /opt/cni/bin ---> has all the supported cni plugins as exe.
+--network-plugin=cni
+
+OR run ps -aux | grep -i kubelet
+The plugins will show...
+
+Check the plugin configuration file.	
+cat /etc/cni/net.d/10-bridge.conf
+
+
+
+
+Note CNI Weave
+
+Important Update: –
+
+Before going to the CNI weave lecture, we have an update for the Weave Net installation link. They have announced the end of service for Weave Cloud.
+
+To know more about this, read the blog from the link below: –
+
+https://www.weave.works/blog/weave-cloud-end-of-service
+
+As an impact, the old weave net installation link won’t work anymore: –
+
+kubectl apply -f “https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d ‘\n’)”
+
+Instead of that, use the below latest link to install the weave net: –
+
+kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml
+
+Reference links: –
+
+    https://www.weave.works/docs/net/latest/kubernetes/kube-addon/#-installation
+    https://github.com/weaveworks/weave/releases
+
+
+
+Weaveworks cni plugin:
+Once a weaveworks cni plugin is deployed on the cluster, it deploys an agent or service on each node on the cluster..	
+They communicate with each other to exchange information regarding the nodes, the networks and pods within them.
+Each agent or pairs stores a topology of the entire setup that is how they know the ip and port of the other nodes.
+Weave creates its own bridge on the node and names it weave, it then assigns ip address to each network.
+
+Important:
+What path a packet takes to destination depends on the route configured on the container
+ip route
+
+HOW DO WE DEPLOY WEAVE ON THE CLUSTER?
+weave/weave peers are deployed as daemons on the cluster..
+Theyre deployed manually.
+However, if k8s is setup already, the easier way to do it is to deploy it as pod 
 	 
 	 
-	 
-	 
-	 
+deploy:
+
+kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml
+
+you can view weave peers
+k get pod -n kube-system
+You will see the weave peers deployed as agents on the other nodes and you will see the one for master
+
+check logs
+
+k logs <podname> weave -n kube-system
+
+
+Solution – Deploy Network Solution:
+
+wget https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml
+
+describe the kube-proxy configmap file to check if it was deployed with.
+Important:
+If you do set the --cluster-cidr option on kube-proxy, make sure it matches the IPALLOC_RANGE given to Weave Net (see below).
+
+NB: Check the --cluster-cidr in the kube-proxy configmap if it was passed as an option then make sure you set an env variable in the weave yaml file.
+e.g
+- name: weave
+  env:
+    - name: IPALLOC_RANGE
+      value: 10.0.0.0/16
+	  
+	  The value of this env should be the value of the --cluster-cidr in the kube-proxy configmap volume.
+
+
+additional arguments may be supplied to the Weave router process by adding them to the command: array in the YAML file,
+additional parameters can be set via the environment variables listed above; these can be inserted into the YAML file like this:
+
+  containers:
+    - name: weave
+      env:
+        - name: IPALLOC_RANGE
+          value: 10.0.0.0/16
+
+
+ipam weave
+
+
+
+
 	
 	
   
