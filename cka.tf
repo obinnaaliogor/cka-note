@@ -4460,12 +4460,112 @@ additional parameters can be set via the environment variables listed above; the
           value: 10.0.0.0/16
 
 
-ipam weave
+ipam weave:
 
+ip address mgt (IPAM) solutions:
+host-local
+dhcp
 
+ k describe cm -n kube-system kube-proxy
+ ip addr show weave
+ 
+ apt-get update
+ apt-get install iproute2
+ 
 
+ Service Networking:
+ 
+ To make pods communicate with each other, you will always use a service..
+ When a service is created, it gets an ip assigned to it.
+ Lets say we have 2 pods a blue pod and an orange pod
+ For the blue pod to talk to the orange pod, it uses service.
+ The blue pod can talk to the orange pod via the name of the service of the orange pod or via the ip address of the service of the orange pod.
+ 
+ When services are created, its accessible from any node in the cluster. It is a cluster wide resource..
+ While a pod is hosted on a node, a service is hosted accross the cluster..
+ It is not bound to a specific node.. But the service is only accessible from within the cluster and its called ClusterIP service..
+ 
+ How are the services getting their ip addresses? How are they made available across all nodes in the cluster??
+ How are services made available to external users through a port on each node.
+ WHos doing that and how when do we see it???
+ 
+ Each node runs a component called kube-proxy..
+ Kube proxy watches the apiserver for new services and everytime a new service is created.
+ kube-proxy agent on each nodes, gets the ip of that service and creates a forwarding rule saying.
+ 
+ Any traffic coming to this service, the ip of the service, should be forwarded or go to the ip of the pod.
+ With this in place, whenever a pod trys to reach the ip of the service, it is forwarded to the ip of the pod.
+ Its not just an ip, its an ip end port combination.
+ 
+ HOW ARE THESE RULES CREATED/Practice test and commands
+ kube-proxy supports
+ 1. userspace
+ 2. ipvs
+ 3. iptables
+ 
+ The proxy mode can be set while configurring kube-proxy.
+ If this is not set, it defaults to kube-proxy....
+ see below:
+ kube-proxy --proxy-mode [iptables | ipvs | userspace]
+ 
+ Where does the service gets its ip from?
+ This is passed as option  in the kube-apiserver configuration on..
+kube-apiserver --service-cluster-ip-range ipNet (Default 10.0.0.0/24)
+also you check
 
+ps aux | grep kube-api-server
+ps -aux | grep kube-api-server
+
+You will see what the range of ip is..
+
+Important:
+The pod and the service should have its distinct range of ip to work with in other to avoid overlap..
+ 
+ 
+ k get pods -o wide
+ look for the ip of the pod and note it..
+ 
+ k get svc 
+ look for the ip address of the svc and note it.
+ 
+ run iptables -L -t nat | grep <service name>
+ 
+ Analyse the output:
+ Youll see the first rule: where the ip of the service is specified...
+ You will see on the DNAT RULE
+ The rule means that any traffic going to the ip of the service on a specified port (dpt)
+ Should be forwarded to the ip of the pod an a specified port.
+ 
+ Check kube-proxy creates this logs by running:
+ cat /var/log/kube-proxy.log
+ 
+ 
+ k exec busybox -- ip route
+ default via 10.244.192.0 dev eth0 
+ 10.244.0.0/16 dev eth0 scope link  src 10.244.192.2 
+ 
+ You can check the proxy the kube-proxy is using by running:
+ k logs kube-proxy-b4zll  -n kube-system 
+ 
+ grep -i kube-apiserver | grep -i range
+ 
+1. To check range of ip for a node, run the k get nodes -o wide and get the ip of the node,
+  the run ip addr command and check the interface that matches the node ip and youll see the cidr range.
+  
+  2. For pod check the ip allocrange in the output of the kube-proxy logs.
+  
+  Or check the cni file cat /etc/cni/net.d/10-weave67678
+  check the name of plugin which is weave
+  run ip address show weave
+  This will show you the weave interface and the address assigned to it.. That will be where the pods gets it ip from.
+  
+  3. Service range ip:
+  Check the api server config.. --cluster-service-range
+  
+ 
 	
+
+  DNS in kubernetes
 	
   
   
