@@ -4565,14 +4565,412 @@ The pod and the service should have its distinct range of ip to work with in oth
  
 	
 
-  DNS in kubernetes
-	
+  DNS in kubernetes:
+  1. What names are assigned to what objects?
+  2. Service DNS records
+  3. Pod DNS Records
+  What are the differerent ways you can reach one pod from another?
+  When a Service is created, the dns solution of the clusters creates a DNS records that maps the name of the service to the ip of the service
+  So within the cluster, any pod can reach the pod which has service created for it using the name of the pods service.
+  This works when the both pods are in the same namespace..
+  
+  What if we have pods in a different namespace.
+  How do we reach a pods from one namespace to another.
+  Say we have a test pod in the default namespace and a web pod in the apps namespace.
+  How can we reach the web pod?
+  1.   We create a service for the web pod. Once we create a service for the web pod (web-service). The kubernetes dns service creates a dns record that maps the name of
+  the service to the apps namespace
+  2. For each namespace the dns server creates a sub domain, if the namespace is apps a subdomain apps will be created..
+  3. All the services are then grouped together into another sub domain called svc
+  so You can reach your application using:
+  web-service.apps.svc
+  4. The services are futher grouped into a subdomain called cluster.local --> TLD
+  
+  You can then reach the pod using:
+  web-service.apps.svc.cluster.local.<ipaddressofthesvc> But you dont need to refernce the ip
+  The above is the FQDN of the service..
+  The above is how services are resolved within the cluster...
+  
+  What about pods?
+  Records about pods are not created by default...
+  However, we can enable that explicitly.
+  Once enabled records for pods are created as well.. It does not use the pods name.. It generates a name by replaing the pods ip with -  eg
+  
+  hostname            ip
+  10-244-10-1         10.244.10.1
+  
+  You can then reach the pod using:
+ 10-244-10-1.apps.pod.cluster.local.<ipaddressofthepod> But you dont need to refernce the ip
+  The above is the FQDN of the pod..
+  The above is how pods are resolved within the cluster...
+  
+  You can decide to access pods he same namespace with FQDN as well, your choice.. But outside the same namespace FQDN is a must.
+  
+
+  CoreDNS in Kubernetes::::
+  How is coreDNS deployed in k8s?
+  Theyre deployed as pods in k8s. Theyre deployed with 2 replicas for redundancy as part of replicaset within deployment.
+  
+  coreDNS configuration file is at /etc/coredns/Corefile
+  Inside the Corefile are plugins such as
+  error --> for handling error
+  health --> for health checks
+  kubernetes --> This makes coreDNS works with k8s, this is where to TLD/root domain/zone of the cluster is set i.e cluster.local
+  pods inscure --> This enables pods dns resolution, is this plugin that adds the dash to pods record. 10-244-10-1.apps.pod.cluster.local.<ipaddressofthepod> 
+  It can disbaled by removing the pods insecure from the corefile.
+  
+  Important:
+  The /etc/coredns/Corefile file is passed as a configmap object to the coredns pods.
+  Its mounted as a volume and this way if you need to modify it you can easly do that..
+  
+
+  When a Service/pod is created, the dns solution of the clusters creates a DNS records that pods/service
+  What ip address does the pods use to reach the dns server?
+  When you deploy the coredns it creates a svc by default.
+  The service is called kube-dns 
+  The ip address of this service is configured as a nameserver on pods in the /etc/resolve.conf k8s does it when pods are created...
+  Its the kubelete that is responsible for this.
+  check the cat /var/lib/kubelet/config.yaml
+  Youll see the clusterDNS 10.0.0.0 --> ip of coredns svc
+  clusterDomain cluster.local
+  
+  I.Q:
+  What is the IP of the CoreDNS server that should be configured on PODs to resolve services?
+  check the cat /var/lib/kubelet/config.yaml
+  or
+  check the ip of the coredns svc...
+   clusterDNS 10.0.0.0
+   
+  
+  check the resolution of the svc.
+  Run:
+  host <svc-name>
+ it will output the FQDN
+ web-service.default.svc.cluster.local
+ How is this possible that it returned the FQDN?
+ The resolve.conf file also has a search entries in it that has
+ cat /etc/resolve.conf
+ search default.svc.cluster.local svc.cluster.local cluster.local
+ this allows you to find the service using any name.
+ 
+ This way you can access svc by running:
+ curl http://web-service 
+ curl http://web-service.default
+ curl http://web-service.default.svc
+ curl http://web-service.default.svc.cluster.local
+ 
+ ------
+ But You cannot reach a pod this way:
+ to reach a pod, you must specify the FQDN e.g
+ 10-244-10-1.apps.pod.cluster.local.<ipaddressofthepod> 
   
   
+ I.Q:
+ Where is the configuration file located for configuring the CoreDNS service?
+ cat /etc/coredns/Corefile
   
  
  
+ Ingress:::
+ Ingress helps your users access your application using a single externally accessible url that you can configure to route traffic to diff services within your cluster
+ based on the url path, the same time impliment ssl security as well..
+ Think of ingress as a layer 7 load balancer built into the kubernetes cluster and can be configured using basic k8s primitives just like any other object that we have been working with in k8s.
+ NOTE: Even with ingress, you still need to expose it to make it accessible to the cluster.. Either as a nodeport or cloud native lB.
  
+ 
+ HOW DOES IT WORK? WHAT IS IT? WHERE IS IT?
+ HOW CAN YOU CONFIGURE IT AND HOW DOES IT LOADBALANCE?
+ HOW DOES IT IMPLIMENT SSL?
+ 
+ WITHOUT INGRESS, HOW WOULD YOU DO ALL OF THIS?
+ I WILL USE A REVERSE PROXY LIKE NGINX, HAPROXY, TRAEFIK.
+ i will deploy them on my k8s cluster and configure them to route traffic to other services..
+ 
+ Implimenting Ingress:
+ 1. Use any of the above listed solutions like HAPROXY,TRAEFIK OR NGINX,CONTOUR,ISTIO, GCP HTTPS GCE LB. 
+ 2. THE SOLUTION YOU DEPLOY IS CALLED INGRESS CONTROLLER
+ 3. THE SET OF RULES YOU CONFIGURE IS CALLED INGRESS RESOURCES
+ Ingress resources are created using definition files.
+ 
+ The k8s cluster does not come with Ingress controller deployed in it by default.
+ If you create ingress resources and expect them to work, they wont...
+ 
+ We deploy the ingress controller using nginx solution.
+ HTTPS GCE LB and NGINX ingress are supported by the k8s project.
+ 
+ This ingress controllers are not just another LB, the loadbalancer are built inside of it. 
+ The ingress controller has an additional inteligence built in it to monitor the kubernetes cluster
+ for new resources and definitions and configure the nginx server accordingly....
+ 
+ The ingress controller is deployed as a deployment.
+ You create a deployment file for it specifying the right image version..
+ The nginx program is stored at 
+ /nginx-ingress-controller
+ 
+ 1. deployment
+ 2. svc to expose the deployment
+ 3. cm to load the config data
+ 4. sa act for auth --> b/c the ingress controller has add inteligence
+ 5. role and rolebinding
+ 
+ 
+ INGRESS RESOURCES:
+ This are set of rules applied on the ingress controller..
+ 1. A rule that says forward an incoming traffic to a single application...
+ 2. route traffic to diff aps based on the url
+ 3. route traffic based on path or host based routing...
+ 
+ REF:
+ https://kubernetes.io/docs/concepts/services-networking/ingress/
+ 
+ IMPORTANT:
+
+ Article: Ingress
+
+ As we already discussed Ingress in our previous lecture. Here is an update. 
+
+ In this article, we will see what changes have been made in previous and current versions in Ingress.
+
+ Like in apiVersion, serviceName and servicePort etc.
+
+         
+
+ Now, in k8s version 1.20+ we can create an Ingress resource from the imperative way like this:-
+
+ Format - kubectl create ingress <ingress-name> --rule="host/path=service:port"
+
+ Example - kubectl create ingress ingress-test --rule="wear.my-online-store.com/wear*=wear-service:80"
+
+ Find more information and examples in the below reference link:-
+
+ https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#-em-ingress-em- 
+
+ References:-
+
+ https://kubernetes.io/docs/concepts/services-networking/ingress
+
+ https://kubernetes.io/docs/concepts/services-networking/ingress/#path-types
+ 
+ 
+ Path types
+
+ Each path in an Ingress is required to have a corresponding path type. 
+ Paths that do not include an explicit pathType will fail validation. There are three supported path types:
+
+     ImplementationSpecific: With this path type, matching is up to the IngressClass. 
+	 Implementations can treat this as a separate pathType or treat it identically to Prefix or Exact path types.
+
+     Exact: Matches the URL path exactly and with case sensitivity.
+
+     Prefix: Matches based on a URL path prefix split by /. Matching is case sensitive and done on a path element by element basis.
+	  A path element refers to the list of labels in the path split by the / separator.
+	  A request is a match for path p if every p is an element-wise prefix of p of the request path.
+	  
+	  
+	  
+
+Ingress – Annotations and rewrite-target
+
+Different ingress controllers have different options that can be used to customise the way it works.
+ NGINX Ingress controller has many options that can be seen here. I would like to explain one such option that we will use in our labs. The Rewrite target option.
+
+ 
+
+Our watch app displays the video streaming webpage at http://<watch-service>:<port>/
+
+Our wear app displays the apparel webpage at http://<wear-service>:<port>/
+
+We must configure Ingress to achieve the below. When user visits the URL on the left, his/her request should be forwarded internally to the URL on the right. Note that the /watch and /wear URL path are what we configure on the ingress controller so we can forward users to the appropriate application in the backend. The applications don’t have this URL/Path configured on them:
+
+ 
+
+http://<ingress-service>:<ingress-port>/watch –> http://<watch-service>:<port>/
+
+http://<ingress-service>:<ingress-port>/wear –> http://<wear-service>:<port>/
+
+ 
+
+Without the rewrite-target option, this is what would happen:
+
+http://<ingress-service>:<ingress-port>/watch –> http://<watch-service>:<port>/watch
+
+http://<ingress-service>:<ingress-port>/wear –> http://<wear-service>:<port>/wear
+
+ 
+
+Notice watch and wear at the end of the target URLs. The target applications are not configured with /watch or /wear paths. They are different applications
+ built specifically for their purpose, so they don’t expect /watch or /wear in the URLs. And as such the requests would fail and throw a 404 not found error.
+
+ 
+
+To fix that we want to “ReWrite” the URL when the request is passed on to the watch or wear applications. 
+We don’t want to pass in the same path that user typed in. So we specify the rewrite-target option. 
+This rewrites the URL by replacing whatever is under rules->http->paths->path which happens to be
+ /pay in this case with the value in rewrite-target. This works just like a search and replace function.
+
+For example: replace(path, rewrite-target)
+
+In our case: replace("/path","/")
+
+ 
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: test-ingress
+  namespace: critical-space
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /pay
+        backend:
+          serviceName: pay-service
+          servicePort: 8282
+
+ 
+
+In another example given here, this could also be:
+
+replace("/something(/|$)(.*)", "/$2")
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+  name: rewrite
+  namespace: default
+spec:
+  rules:
+  - host: rewrite.bar.com
+    http:
+      paths:
+      - backend:
+          serviceName: http-svc
+          servicePort: 80
+        path: /something(/|$)(.*)
+
+		IMPORTANT: IT IS THE PORT OF THE SERVICE WE ARE SPECIFYING AS THE BACK END PORT.
+		
+		
+
+Design and Install a Kubernetes Cluster::;
+Before you design a cluster, you must ask relevant questions..
+
+1. Purpose
+a. Education
+Use--> Minikube
+Single node cluster with kubeadm/GCP/AWS
+
+b Development and testing
+Multi-node cluster with a single master and multi workers.
+setup using kubeadm/GCP/AWS/AKS
+
+c. Hosting production applications
+High avai. multi node cluster with multi master node.
+setup using kubeadm/GCP/AWS/AKS/kops or other supported platform
+upto 5000 nodes
+upto 150,000 pods per cluster
+upto 300,000 total containers
+upto 100 pods per node.
+  
+2. Cloud or Onprem
+3. Workloads 
+a. How many application are going to be hosted on the cluster
+b. What kind of application will be hosted on the cluster.
+i. Web application
+ii. Big Data/Analytics
+
+4. Application Resource Requirments
+  i. CPU intensive
+  ii. Memory intensive
+  
+  5. Traffic 
+  i. Heavy traffic
+  ii. Burst traffic
+  
+ 
+
+
+
+  Choosing Kubernetes Infrastructure:
+  turnkey solutions:
+  1. vagrant
+  2. vmware cloud pks
+  3 openshift
+  4. cloud foundry cr
+  
+  hosted solutions:
+  1 GKE
+  2 EKS
+  3. AKS
+  4. OPENSHIFT ONLINE
+   
+
+Configure High Availability:
+In a high availability setup of the k8s cluster, you will have a multiple master nodes kubernetes cluster!
+A high availability in the cluster is where you have redundancy for every component in the cluster...
+This ensure you do not have a single point of failure.
+in a HA setup you have the controlplane component running in each of the master nodes.
+How will they designate the task?
+Will they share the workloads amongst themselves????
+Will they perform the same task at once? It all defers based on what they do.
+
+1. kube-api-server: They will work on one request at a time, theyll both be on an active mode.
+We create a loadbalancer that splits traffic bw the api-server.
+We point the kubectl utility to the loadbalancer..
+
+2. Scheduler and controller manager: They watch the state of the cluster and take actions....
+
+3. The controller manager: Watches the state of the cluster and takes necessary action to maintain the desired state.
+It has controllers such as node, and replication controllers.
+If we have multiple controller manager and its replication controller that maintains the state of pod, creating pods at the same time, it might result to more pods 
+created than desired.
+How do we stop this from happening?
+
+4. Scheduler: The same fate as the controller manager is applicable to the kube-sceduler.
+How do we solve this?
+1. They must not run in paralle.
+2. They run in an active standy mode
+3 node is active on one node and the other on the second node is on standy...
+
+Who decides which is active and which is passive/stadby??????///
+This is achived through a leader elect process!!
+
+1. Kube-controller-manager:
+When you configure the controller manager, you must specify the leader elect optio to true..
+kube-controller-manager --leader-elect [other options]
+
+When the kube-controller-manager process starts, it trys to get a lease or lock from the kube-controller-manager endpoint.
+Which ever process first updates its information on the kube-controller-manager endpoint gains the lease and becomes the active of the 2 or becomes the leader elect..
+The other becomes passive/standby..
+It holds the lease/lock it aquired for the lease duration <--leader-elect-lease-duration 15s> configured in the kube-controller-manager config file.
+The active process then renews the lease every 10s by default. --leader-elect-renew-deadline 10s
+Both processes trys to become the leader elect every 2 seconds, that way if one master fails the other process in the other master will aquire the lease/lock and become a leader..
+
+------
+kube-controller-manager --leader-elect [other options]
+--leader-elect-lease-duration 15s 
+--leader-elect-renew-deadline 10s
+--leader-elect-retry-periods 2s
+
+4. The kube-scheduler: It follows the same approach as the kube-controller-manager and has the same command line option..
+
+5. ETCD: With etcd there are 2 topology you can configure in k8s.
+1. Stacked toplogy --> This is when etcd is deployd as a pod in the kubernetes cluster.
+2. External topology --> This is where etcd is hosted on a seprate server from the controlplane.
+
+Which ever solution you choose, you must pass the option to the kube-api-server configuration file pointing at the right etcd-servers.
+Since etcd is a distributed database.
+data can be written or read from any of the etcd instances, it does not need a leader elect option.
+this is why we list the lists of etcd server in the apiserver configuration..
+
+
+
+
  
 
 
