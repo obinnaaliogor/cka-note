@@ -1574,8 +1574,12 @@ They comm bw each using localhost.
 						  Identify the individual certificates used by the apiserver. View it and understand it in details...
 						  RUN:
 						  
-						  openssl X509  -in /etc/kubernetes/manifests/kube-apiserver.yaml -noout -text
-						  
+						  openssl X509  -in <pathto the crt file> -noout -text
+  						View Certificate Details::::
+  						https://kubernetes.io/docs/tasks/administer-cluster/certificates/
+						
+  						command:
+  						  openssl req  -noout -text -in ./server.csr
 						  
 						  
 						  Toubleshooting:
@@ -4441,6 +4445,8 @@ Important:
 If you do set the --cluster-cidr option on kube-proxy, make sure it matches the IPALLOC_RANGE given to Weave Net (see below).
 
 NB: Check the --cluster-cidr in the kube-proxy configmap if it was passed as an option then make sure you set an env variable in the weave yaml file.
+ALSO IF YOU DEPLOYED YOUR CLUSTER USING --cluster-cidr 
+
 e.g
 - name: weave
   env:
@@ -4965,22 +4971,575 @@ kube-controller-manager --leader-elect [other options]
 
 Which ever solution you choose, you must pass the option to the kube-api-server configuration file pointing at the right etcd-servers.
 Since etcd is a distributed database.
-data can be written or read from any of the etcd instances, it does not need a leader elect option.
+data can be written on one etcd instance and read from the other etcd instances, it uses a leader elect option to choose who writes/leader and the follower.
 this is why we list the lists of etcd server in the apiserver configuration..
 
 
+ETCD in HA:
+In HA mode. The etcd instances elects a leader and the other instances becomes the follower.
+The leader writes data and distributes a copy to the follows which is for reading of data.
+If the write request comes through a follower, the follower forwards it to the leader, the leader then writes the data and sends a copy to the followers thus the followers are for reading of data.
+A write is considered complete if a leader gets consent from the members.
+How do they elect a leader amongst themselves...
+How do they ensure a write is propagated across instances of etcd.
+ETCD impliments distributed consensous using RAFT protocol..
+
+HOW DOES THIS WORK IN A 3 NODE CLUSTER???
+RAFT protocol uses a random timer for initiating request. A random timer is kicked off bw the 3 managers.
+The first to finish the timer sends out a request to the other managers requesting for a permission to be the leader.
+The other managers uppon receiving the requests sends their vote and that one becomes the leader.
+
+Assuming the role of the leader, at intervals it sends out a request to the other masters that its continuing with it leadership role..
+In case the leader didnt send a request due to the server going down, the members initiates a re election process and a new leader is identified or elected.
+
+In a case where a write comes in within a 3 node cluster.
+The leader is expected to write the data and replicate it accross the other 2 for them to have a copy.
+What if the replication wasnt complete?
+Lets the leader was only able to replicate the data to just one of the node and the other wasnt successful?
+Will the write be defined as complete??????
+
+The write is only complete if the data can be written to majority of the node in the cluster
+
+in 3 nodes, the majority is 2 and if data can be written to the 2 it will be deemed as complete..
+
+What is majority?
+Quorum? The minimum number of node that must be available for the cluster to function well or make a sucessfully write...
+Quorum = N/2 +1
+where N = total number of nodes..
+with an even number quorum cant be implimented and the entire cluster will go down in disaster..
+
+options:
+--initial-cluster peer option is how etcd kwns its part of a cluster..
+
+---------------
+
+Important Update: Kubernetes the Hard Way
+
+Installing Kubernetes the hard way can help you gain a better understanding of putting together the different components manually.
+
+An optional series on this is available at our youtube channel here:
+
+https://www.youtube.com/watch?v=uUupRagM7m0&list=PL2We04F3Y_41jYdadX55fdJplDvgNGENo
+
+The GIT Repo for this tutorial can be found here: https://github.com/mmumshad/kubernetes-the-hard-way
+
+
+Introduction to Deployment with kubeadm:
+
+
+Resources
+
+The vagrant file used in the next video is available here:
+
+https://github.com/kodekloudhub/certified-kubernetes-administrator-course
+
+Here’s the link to the documentation:
+
+https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
+
+1. vm
+2. docker
+https://kubernetes.io/docs/setup/production-environment/container-runtimes/
+https://docs.docker.com/engine/install/ubuntu/
+3. kubeadm
+4. initialize
+5 pod network
+6 join
+
+Check your init system 
+run ps -p 1
+
+remove the content of this file vi /etc/containerd/config.toml
+replace with:
+
+[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+  ...
+  [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+    SystemdCgroup = true
+
+
+	sudo apt-get install -y kubelet=1.27.0-00 kubeadm=1.27.0-00 kubectl=1.27.0-00
+	sudo apt-mark hold kubelet kubeadm 
+
+
+
+
 
 
  
+Install “Kubernetes the kubeadm way:
+
+Go to the documentation and type install kubeadm
+1. Installing a container runtime:
+Click on container run time and Install and configure prerequisites
+https://kubernetes.io/docs/setup/production-environment/container-runtimes/
+
+RUN:
+
+Forwarding IPv4 and letting iptables see bridged traffic
+
+Execute the below mentioned instructions:
+
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
+
+sudo modprobe overlay
+sudo modprobe br_netfilter
+
+# sysctl params required by setup, params persist across reboots
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+EOF
+
+# Apply sysctl params without reboot
+sudo sysctl --system
 
 
+2. Installing kubeadm, kubelet and kubectl
+
+use the rigt kubernetes apt repo depending on the required version of the component needed.
+check:
+Kubernetes package repositories
+
+https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
 
 
+Note: In releases older than Debian 12 and Ubuntu 22.04, /etc/apt/keyrings does not exist by default; you can create it by running sudo mkdir -m 755 /etc/apt/keyrings
+
+3. initialize the cluster by running kubeadm init <args>
+
+4 join the worker node to the controlplan
+
+5. deploy a network solution..
+Install containerd if required.
+https://docs.docker.com/engine/install/ubuntu/
+
+sudo apt-cache madison kubeadm --> Use this command to check the versions of the component that exists in the repo you added.
+
+................
 
 
+Troubleshooting – Section Introduction:
+
+
+Application Failure: in a 2 tier app..
+Check application accessibility:
+1. check if the webserver is accessible using curl
+curl http://web-service:nodeport
+2. check the service, has it discovered service for the endpoint?
+compare the selector configured on the service to the one on the pod..
+
+3. check the pods to be sure its in a running state.
+check the status and the number of restarts.. This will give you an idea if the app is running or getting restarted..
+check the event on the pod by using the describe command.
+check the logs of the app using the logs command.
+
+NB: If the pods is getting restarted, the current log might not reflect why it failed previously.
+You have to use the watch option to watch the logs and wait for the app to fail again..
+
+k logs <podname> -f  where f = watch 
+or
+use the --previous option to view the logs of the previous pod.
+
+k logs <podname> -f --previous
+
+4. check the status of the db service
+5. check the db pod
+6. check the logs of the db pod and check for any error in the database...
+
+I must read the question carefully, understand it b4 doing the task....
+Note: The mysql user is root by default it does not need to be set in the mysql pod itself except reqiured...
+DB_HOST is the name of the service of the db.. thats how the webapp can talk to it..
+
+
+  kubectl config set-context [NAME | --current] [--cluster=cluster_nickname] [--user=user_nickname]
+[--namespace=namespace] [options]
+
+kubectl config set-context --current --namespace=alpha
+curl http://localhost:30081 --> you can curl localhost cuz is a nodeport svc
  
  
+
+Control Plane Failure:
+1. Check the nodes status
+k get nodes
+see if theyre all healthy.
+
+2. Check status of the pods running..
+See if theyre all healthy.
+
+3. If we have a cluster deployed using the kubeadm tool, then check the status of the pods in the kube-system namespace and see that theyre all healthy.
+k get pods -n kube-system
+
+4. If controleplan component are deployed as native services then.
+run:
+service kube-apiserver status
+service kube-controller-manager status
+service kubelet status --> worker node
+service kube-scheduler status
+service kube-proxy status
+
+4 Check service logs of the controlplane components:
+
+cluster deployed using kubeadm tool use 
+k logs kube-apiserver-master -n kube-system
+
+4. cluster deployed using native services:
+
+journalctl -u kube-apiserver
+https://kubernetes.io/docs/tasks/debug/debug-cluster/
+
+/etc/kubernetes/controller-manager.conf
+
+alias k=kubectl
+complete -o default -F __start_kubectl k
+
+Type kubectl cheat sheet
+https://kubernetes.io/docs/reference/kubectl/cheatsheet/
+copy:
+source <(kubectl completion bash) --> # set up autocomplete in bash into the current shell, bash-completion package should be installed first.
  
+ 
+
+Worker Node Failure:
+
+Control Plane nodes
+
+    /var/log/kube-apiserver.log - API Server, responsible for serving the API
+    /var/log/kube-scheduler.log - Scheduler, responsible for making scheduling decisions
+    /var/log/kube-controller-manager.log - a component that runs most Kubernetes built-in controllers, with the notable exception of scheduling (the kube-scheduler handles scheduling).
+
+Worker Nodes
+/var/log/kubelet.log - logs from the kubelet, responsible for running containers on the node
+/var/log/kube-proxy.log - logs from kube-proxy, which is responsible for directing traffic to Service endpoint
+
+1. Check the node status are they recorded as ready or not ready
+k get nodes
+
+2. If theyre recorded as not ready use the kubectl command to describe the node.
+
+k describe node worker-node-01
+
+Look for the below:
+
+
+conditions:
+
+Type.       status     lastheartbeatTime         Reason                Message
+
+The status are set to
+1. true --> can mean good or bad.. True if node is ready is good but true for the rest (type) is bad..
+2. false  --> means everything is ok
+3. unknown  ---> outofdisk issue, mem issue, pid issue, when these are wrong we have these unknown status..
+
+Important:
+unknown status can mean a possible loss of a node..
+Check the lastheartbeattime to find out the time when the node might have crashed..
+if crashed, bring it back up..
+
+4. check for possible cpu and memory on the node
+k top nodes
+top
+df -h
+
+5. Check the status of the kubelet
+service kubelet status
+
+check the kubelet logs for possible issues
+
+journalctl -u kubelet
+
+6. Check the kubelet certificate that theyre not expired..
+that theyre in the right group and issued by the right CA.
+  
+  openssl X509  -in <pathto the crt file> -noout -text
+View Certificate Details::::
+https://kubernetes.io/docs/tasks/administer-cluster/certificates/
+
+command:
+  openssl req  -noout -text -in ./server.csr
+  
+  
+  ISSUE:
+  ● kubelet.service - kubelet: The Kubernetes Node Agent
+       Loaded: loaded (/lib/systemd/system/kubelet.service; enabled; vendor preset: enabled)
+      Drop-In: /etc/systemd/system/kubelet.service.d
+               └─10-kubeadm.conf
+       Active: inactive (dead) since Wed 2023-10-11 14:18:56 EDT; 1min 12s ago
+         Docs: https://kubernetes.io/docs/home/
+      Process: 1954 ExecStart=/usr/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_CONFIG_ARGS $KUBELET_KUBEADM_ARGS $KUBELET_EXTRA_ARGS (code=exited, status=0/SUCCESS)
+     Main PID: 1954 (code=exited, status=0/SUCCESS)
+	 
+	 Check loaded:
+	 check active: 
+	 
+	 after checking journalctl -u kubelet
+	 --
+	 vi /var/lib/kubelet/config.yaml
+	 
+	 apiVersion: kubelet.config.k8s.io/v1beta1
+	 authentication:
+	   anonymous:
+	     enabled: false
+	   webhook:
+	     cacheTTL: 0s
+	     enabled: true
+	   x509:
+	     clientCAFile: /etc/kubernetes/pki/ca.crt
+	 authorization:
+	   mode: Webhook
+	   webhook:
+	     cacheAuthorizedTTL: 0s
+	     cacheUnauthorizedTTL: 0s
+	 cgroupDriver: systemd
+	 clusterDNS:
+	 - 10.96.0.10
+	 clusterDomain: cluster.local
+	 containerRuntimeEndpoint: ""
+	 cpuManagerReconcilePeriod: 0s
+	 evictionPressureTransitionPeriod: 0s
+	 fileCheckFrequency: 0s
+	 healthzBindAddress: 127.0.0.1
+	 healthzPort: 10248
+	 httpCheckFrequency: 0s
+	 imageMinimumGCAge: 0s
+	 kind: KubeletConfiguration
+	 logging:
+	   flushFrequency: 0
+	   options:
+	     json:
+	       infoBufferSize: "0"
+	   verbosity: 0
+	 memorySwap: {}
+	 nodeStatusReportFrequency: 0s
+	 nodeStatusUpdateFrequency: 0s
+	 resolvConf: /run/systemd/resolve/resolv.conf
+	 rotateCertificates: true
+	 runtimeRequestTimeout: 0s
+	 shutdownGracePeriod: 0s
+	 shutdownGracePeriodCriticalPods: 0s
+	 staticPodPath: /etc/kubernetes/manifests
+	 streamingConnectionIdleTimeout: 0s
+	 syncFrequency: 0s
+	 volumeStatsAggPeriod: 0s
+
+
+	 Check the ca file at the kubelet node
+	 /etc/kubernetes/pki/ca.crt
+	 
+	 /etc/kubernetes/kubelet.conf 
+	 /var/lib/kubelet/config.yaml
+	 
+	 
+.Important point:
+
+`/etc/kubernetes/kubelet.conf` and `/var/lib/kubelet/config.yaml` are two distinct configuration files used in a Kubernetes cluster, and they serve different purposes. Let's explain each of them:
+
+1. `/etc/kubernetes/kubelet.conf`:
+   - **Purpose**: This file is the kubeconfig file for the kubelet service.
+    It contains the configuration information needed for the kubelet to authenticate with the Kubernetes API server and perform its duties in the cluster.
+   - **Contents**: Typically, this file contains information like the API server's address, the certificate and private key for authentication,
+    and the user context to use for kubelet's interactions with the API server.
+   - **Location**: It is usually located in the `/etc/kubernetes` directory on a node in the Kubernetes cluster.
+   - **Usage**: The kubelet service uses this configuration to communicate with the Kubernetes control plane components, such as the API server, 
+   to register the node, manage pods, and handle other node-specific tasks.
+
+2. `/var/lib/kubelet/config.yaml`:
+   - **Purpose**: This file is the kubelet's own configuration file. It defines various settings and options related to the behavior of the kubelet on the node.
+   - **Contents**: The `config.yaml` file includes settings such as the node's hostname, the location of the pod manifest directory, 
+   the address and port for the kubelet's health endpoint, and various other configuration options that affect how the kubelet operates.
+   - **Location**: It is typically located in the `/var/lib/kubelet` directory on a node in the Kubernetes cluster.
+   - **Usage**: The kubelet uses this configuration file to control its behavior and how it manages pods and containers on the node.
+
+In summary, `/etc/kubernetes/kubelet.conf` is primarily used for authentication and communication between the kubelet service and 
+the Kubernetes control plane, while `/var/lib/kubelet/config.yaml` is used for configuring the behavior of the kubelet itself on the node.
+
+ These two configuration files serve different purposes within the Kubernetes node, and both are crucial for the proper functioning of the kubelet and the Kubernetes cluster as a whole.
+ 
+ 
+ Important:
+ 3 senarios for the kubelet
+ 1. loaded and inactive <dead> --> needs restart
+ 2. loaded and activating --> check the /var/lib/kubelet/config.yaml uses to manage node, /etc/kubernetes/kubelet.conf kube-apiserver authentication file.
+ 3. loaded and active --> kubelet is good
+	 
+	 
+
+ ISSUE:
+ ssh node01
+ssh: Could not resolve hostname node01: Name or service not known
+
+run: k get nodes -o wide and use the nodes ip to ssh.
+
+
+
+................................
+
+Network Troubleshooting
+Network Plugin in kubernetes:
+
+——————–
+
+There are several plugins available and these are some.
+
+1. Weave Net:
+
+To install,
+
+kubectl apply -f
+https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml
+
+You can find details about the network plugins in the following documentation :
+
+https://kubernetes.io/docs/concepts/cluster-administration/addons/#networking-and-network-policy
+
+2. Flannel :
+
+To install,
+
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/2140ac876ef134e0ed5af15c65e414cf26827915/Documentation/kube-flannel.yml
+
+ 
+
+Note: As of now flannel does not support kubernetes network policies.
+
+3. Calico :
+
+ 
+
+To install,
+
+curl https://docs.projectcalico.org/manifests/calico.yaml -O
+
+Apply the manifest using the following command.
+
+kubectl apply -f calico.yaml
+
+Calico is said to have most advanced cni network plugin.
+
+In CKA and CKAD exam, you won’t be asked to install the cni plugin. But if asked you will be provided with the exact url to install it.
+
+Note: If there are multiple CNI configuration files in the directory, the kubelet uses the configuration file that comes first by name in lexicographic order.
+DNS in Kubernetes
+—————–
+
+Kubernetes uses CoreDNS. CoreDNS is a flexible, extensible DNS server that can serve as the Kubernetes cluster DNS.
+
+Memory and Pods
+
+In large scale Kubernetes clusters, CoreDNS’s memory usage is predominantly affected by the number of Pods and Services in the cluster. Other factors include the size of the filled DNS answer cache, and the rate of queries received (QPS) per CoreDNS instance.
+
+Kubernetes resources for coreDNS are:
+
+    a service account named coredns,
+    cluster-roles named coredns and kube-dns
+    clusterrolebindings named coredns and kube-dns, 
+    a deployment named coredns,
+    a configmap named coredns and a
+    service named kube-dns.
+
+While analyzing the coreDNS deployment you can see that the the Corefile plugin consists of important configuration which is defined as a configmap.
+
+Port 53 is used for for DNS resolution.
+
+    kubernetes cluster.local in-addr.arpa ip6.arpa {
+       pods insecure
+       fallthrough in-addr.arpa ip6.arpa
+       ttl 30
+    }
+
+This is the backend to k8s for cluster.local and reverse domains.
+
+proxy . /etc/resolv.conf
+
+Forward out of cluster domains directly to right authoritative DNS server.
+Troubleshooting issues related to coreDNS
+
+1. If you find CoreDNS pods in pending state first check network plugin is installed.
+
+2. coredns pods have CrashLoopBackOff or Error state
+
+If you have nodes that are running SELinux with an older version of Docker you might experience a scenario where the coredns pods are not starting. To solve that you can try one of the following options:
+
+a)Upgrade to a newer version of Docker.
+
+b)Disable SELinux.
+
+c)Modify the coredns deployment to set allowPrivilegeEscalation to true:
+
+kubectl -n kube-system get deployment coredns -o yaml | \
+  sed 's/allowPrivilegeEscalation: false/allowPrivilegeEscalation: true/g' | \
+  kubectl apply -f -
+
+d)Another cause for CoreDNS to have CrashLoopBackOff is when a CoreDNS Pod deployed in Kubernetes detects a loop.
+
+There are many ways to work around this issue, some are listed here:
+
+    Add the following to your kubelet config yaml: resolvConf: <path-to-your-real-resolv-conf-file> This flag tells kubelet to pass an alternate resolv.conf to Pods. For systems using systemd-resolved, /run/systemd/resolve/resolv.conf is typically the location of the “real” resolv.conf, although this can be different depending on your distribution.
+    Disable the local DNS cache on host nodes, and restore /etc/resolv.conf to the original.
+    A quick fix is to edit your Corefile, replacing forward . /etc/resolv.conf with the IP address of your upstream DNS, for example forward . 8.8.8.8. But this only fixes the issue for CoreDNS, kubelet will continue to forward the invalid resolv.conf to all default dnsPolicy Pods, leaving them unable to resolve DNS.
+
+3. If CoreDNS pods and the kube-dns service is working fine, check the kube-dns service has valid endpoints.
+
+kubectl -n kube-system get ep kube-dns
+
+If there are no endpoints for the service, inspect the service and make sure it uses the correct selectors and ports.
+Kube-Proxy
+———
+
+kube-proxy is a network proxy that runs on each node in the cluster. kube-proxy maintains network rules on nodes. These network rules allow network communication to the Pods from network sessions inside or outside of the cluster.
+
+In a cluster configured with kubeadm, you can find kube-proxy as a daemonset.
+
+kubeproxy is responsible for watching services and endpoint associated with each service. When the client is going to connect to the service using the virtual IP the kubeproxy is responsible for sending traffic to actual pods.
+
+If you run a kubectl describe ds kube-proxy -n kube-system you can see that the kube-proxy binary runs with following command inside the kube-proxy container.
+
+    Command:
+      /usr/local/bin/kube-proxy
+      --config=/var/lib/kube-proxy/config.conf
+      --hostname-override=$(NODE_NAME)
+
+ 
+
+So it fetches the configuration from a configuration file ie, /var/lib/kube-proxy/config.conf and we can override the hostname with the node name of at which the pod is running.
+
+ 
+
+In the config file we define the clusterCIDR, kubeproxy mode, ipvs, iptables, bindaddress, kube-config etc.
+
+ 
+Troubleshooting issues related to kube-proxy
+
+1. Check kube-proxy pod in the kube-system namespace is running.
+
+2. Check kube-proxy logs.
+
+3. Check configmap is correctly defined and the config file for running kube-proxy binary is correct.
+
+4. kube-config is defined in the config map.
+
+5. check kube-proxy is running inside the container
+
+# netstat -plan | grep kube-proxy
+tcp        0      0 0.0.0.0:30081           0.0.0.0:*               LISTEN      1/kube-proxy
+tcp        0      0 127.0.0.1:10249         0.0.0.0:*               LISTEN      1/kube-proxy
+tcp        0      0 172.17.0.12:33706       172.17.0.12:6443        ESTABLISHED 1/kube-proxy
+tcp6       0      0 :::10256                :::*                    LISTEN      1/kube-proxy
+
+References:
+
+Debug Service issues:
+
+https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/
+
+DNS Troubleshooting:
+
+https://kubernetes.io/docs/tasks/administer-cluster/dns-debugging-resolution/
 
  
  
