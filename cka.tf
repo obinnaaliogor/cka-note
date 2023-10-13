@@ -5541,9 +5541,1038 @@ DNS Troubleshooting:
 
 https://kubernetes.io/docs/tasks/administer-cluster/dns-debugging-resolution/
 
+
+ISSUES: 
+Pod stucked in creating state.
+There was no network solution deployed, i deployed weave and it worked..
+
+ISSUE: POD RUNNING, SVC,EP,SVC NAME ALL OK BUT APP NOT LOADING OR SERVING ENDUSERS.
+Kube-proxy in crashloop.
+kubectl logs and describe.
+showed that it was an issue with the kube proxy config.conf file.. It was the wrong one that was specified diff from what was in the configmap data:
+
+
+
+Labs – JSON PATH
+
+To practice more on JSON PATH with hands-on Labs check out the lab exercises in this course:
+
+https://kodekloud.com/p/json-path-quiz
+
+Pre-Requisites – JSON PATH
+
+In the upcoming lecture we will explore some advanced commands with kubectl utility. But that requires JSON PATH. 
+
+If you are new to JSON PATH queries get introduced to it first by going through the lectures and practice tests available here.
+
+https://kodekloud.com/p/json-path-quiz
+
+Once you are comfortable head back here:
+
+I also have some JSON PATH exercises with Kubernetes Data Objects. Make sure you go through these:
+
+https://mmumshad.github.io/json-path-quiz/index.html#!/?questions=questionskub1
+
+https://mmumshad.github.io/json-path-quiz/index.html#!/?questions=questionskub2
+
+
+
+Introduction to JSON PATH:
+
+In json, we use a square bracket [] to denote a list and each item in the list is separated by a comma.
+
+www.json2yaml.com --> helps you convert json to yaml
+
+Json path is a query that allows you to pass data in a json or yaml format..
+json path when applied allows you to query a data and retreive a specific subset of the data
+
+example: a dictionary in json path.
+
+{
+	"car" : {
+	   "color" : "blue",
+	   "price" : "20,000"	
+	},
+	
+	"bus" : {
+	  "color" : "red",
+	  "price" : "120,000",
+    "owner" : "john"
+	
+  }
+
+}
+
+
+To query the above data to retreive a specific data like car or bus.
+1. you query get car
+2. get bus
+...
+To the the color of the car, you query
+1. get car.color ---> The output will be blue
+2. get bus.color ---> red
+
+Note in the dictionary the first key and value should have comma at the end of the value expect the last value.
+If you have to specify another dictionary, then you have use comma to separate the first from the second.
+
+
+Important:
+
+The top level dictionary which has no name is called root element of the json document.
+The root element is denoted by a dollar <$>
+example:
+
+{
+	"car" : {
+	   "color" : "blue",
+	   "price" : "20,000"	----> This should start with "$" 
+	},
+	
+	"bus" : {
+	  "color" : "red",
+	  "price" : "120,000",
+    "owner" : "john"
+	
+  }
+
+}
+--
+
+
+example 2
+
+{
+  "vehicles": { 
+	  "car" : {
+	     "color" : "blue",
+	     "price" : "20,000"	
+	},
+	
+	 "bus" : {
+	    "color" : "red",
+	    "price" : "120,000",
+      "owner" : "john"
+	
+  }
+    
+  }
+}
+
+Querying dictionary in a json data:
+A query created for a json document with dictionary as its root should start with a dollar sign $.
+If the json file has dictionary as the root, start the query with a dollar sign.
+ 
+To query the data, we use $.car, $.car.color, $.bus, $.bus.color
+
+What about the dictionary that has Vehicles?
+
+We query it as follows:
+$.vehicles.car, $.vehicles.car.color, $.vehicles.bus.color
+
+
+Important:
+All result of a json path document query are encapsulated within an array.
+meaning theyre encapsulated within a pair of square bracket.
+
+
+
+
+
+
+..........
+In the context of querying JSON data, the dot (.) is used to navigate through the structure of the JSON document to access specific properties or elements within objects. 
+It is often used in conjunction with query languages or libraries like JSONPath, jq, or similar tools. Here's how the dot (.) is used in a query:
+
+1. **Accessing Properties**: The dot is commonly used to access properties (keys) within JSON objects. For example, if you have a JSON object like this:
+
+   ```json
+   {
+     "name": "John",
+     "age": 30,
+     "address": {
+       "street": "123 Main St",
+       "city": "New York"
+     }
+   }
+   ```
+
+   You can use the dot notation to access specific properties:
+
+   - To access the "name" property: `$.name`
+   - To access the "city" property within the "address" object: `$.address.city`
+
+2. **Iterating Arrays**: When working with arrays in JSON, you can use the dot notation to iterate through elements of an array. For example:
+
+   ```json
+   {
+     "fruits": ["apple", "banana", "orange"]
+   }
+   ```
+
+   - To access the first element of the "fruits" array: `$.fruits[0]`
+   - To access the second element of the "fruits" array: `$.fruits[1]`
+
+3. **Combining Paths**: You can use dots to combine multiple levels of navigation in a single query. For example:
+
+   ```json
+   {
+     "user": {
+       "profile": {
+         "name": "Alice",
+         "age": 25
+       }
+     }
+   }
+   ```
+
+   - To access the "name" property within the "profile" object: `$.user.profile.name`
+
+The dot (.) is a convenient and intuitive way to navigate and access data within a JSON document. 
+It allows you to specify the hierarchy of keys and objects to reach the desired data within the structure.
+
+
+A LIST OR AN ARRAY IN A JSON PATH:
+
+To query a json path document in a list, we use index..
+To query the below employees json path.
+$.employees[0] --> This will output the first elemt in the list
+$.employess[0].name --> this will output the name Alice from the first element
+$.employess[*].name --> this will iterate and output all the names in the lists.
+
+
+{
+  "employees": [
+    {
+      "id": 1,
+      "name": "Alice",
+      "department": "HR"
+    },
+    {
+      "id": 2,
+      "name": "Bob",
+      "department": "Engineering"
+    },
+    {
+      "id": 3,
+      "name": "Charlie",
+      "department": "Marketing"
+    }
+  ]
+}
+```
+
+Certainly, here's an example of JSONPath used to query data within an array in a JSON document. Consider the following JSON document:
+
+```json
+{
+  "employees": [
+    {
+      "id": 1,
+      "name": "Alice",
+      "department": "HR"
+    },
+    {
+      "id": 2,
+      "name": "Bob",
+      "department": "Engineering"
+    },
+    {
+      "id": 3,
+      "name": "Charlie",
+      "department": "Marketing"
+    }
+  ]
+}
+```
+
+Now, let's say you want to use JSONPath to query the names of all employees in the "employees" array. You can use the following JSONPath query:
+
+- To access all "name" properties within the "employees" array:
+  - JSONPath: `$.employees[*].name`
+
+This JSONPath query uses `[*]` to iterate through all elements in the "employees" array and then selects the "name" property for each employee. 
+When you apply this query, it would return an array of names:
+
+```json
+["Alice", "Bob", "Charlie"]
+```
+
+JSONPath is a powerful tool for extracting and querying data from JSON documents, and it allows you to specify complex queries to navigate through the structure of your data.
+
+
+Querrying a dictionary and a list::
+-----------------------------------
+
+[
+	
+	12
+	13
+	5
+	99
+	90
+	
+	33
+	46
+	
+]
+
+$[ ? (    each item in the list   )    ] --> ?() is used to specify a criteria or filter or check if
+
+ 
+@ --> is used to represent each item in the list..
+
+so we have
+
+$[ ? (   @ > 40   ) 
+	
+	MORE: You can use
+	
+	@ == 40
+	@ != 40
+	@ in [40,43,45] ---> Returns all the numbers that are 40,43 and 45
+	@ nin [40,43,45] ---> Returns all the numbers not in 40,43 and 45
+	
+	
+--------------------------------
+	
+example:
+ 
+Yes, your JSONPath expression is almost correct. To get the numbers greater than 10 from the array, you can use the following JSONPath expression:
+
+```json
+$[?( @ > 10 )]
+```
+
+In this expression:
+
+- `$` refers to the root of the JSON array.
+- `[?( @ > 10 )]` is a filter expression. It selects elements in the array that satisfy the condition of being greater than 10.
+
+Given your example array:
+
+```json
+[
+  10,
+  11,
+  90,
+  77,
+  90,
+  100,
+  90,
+  99,
+  1,
+  2,
+  3,
+  88
+]
+```
+
+When you apply the JSONPath expression `$[?( @ > 10 )]`, it will return an array of numbers greater than 10:
+
+```json
+[11, 90, 77, 90, 100, 99, 88]
+```
+
+This expression filters the array and selects only the numbers that are greater than 10.
+
+
+....
+QUESTION:
+Develop a JSON path query to extract the model of the third wheel of the car.
+
+{
+  "car": {
+    "color": "blue",
+    "price": "$20,000",
+    "wheels": [
+      {
+        "model": "KDJ39848T",
+        "location": "front-right"
+      },
+      {
+        "model": "MDJ39485DK",
+        "location": "front-left"
+      },
+      {
+        "model": "KCMDD3435K",
+        "location": "rear-right"
+      },
+      {
+        "model": "JJDH3434KK",
+        "location": "rear-left"
+      }
+    ]
+  }
+}
+
+ANSWER:
+$.car.wheels[?( @.location == "rear-right" )].model This also means $.car.wheels[2].model
+
+
+2.QUESTION:
+Retreive the 3rd month's pay details of the employee.
+{
+  "employee": {
+    "name": "john",
+    "gender": "male",
+    "age": 24,
+    "address": {
+      "city": "edison",
+      "state": "new jersey",
+      "country": "united states"
+    },
+    "payslips": [
+      {
+        "month": "june",
+        "amount": 1400
+      },
+      {
+        "month": "july",
+        "amount": 2400
+      },
+      {
+        "month": "august",
+        "amount": 3400
+      }
+    ]
+  }
+}
+
+
+ANSWER:
+$.employee.payslips[?( @.month == "august" )] this also means $.employee.payslips[2]
+
+The first answer is better b/c if the data admin did not enter the data in an orderred manner or it was a mistake, then it wont be wont be the 3rd item in the list.
+
+
+MORE:
+IQ: 
+
+Retreive the 3rd month's pay amount of the employee.
+
+ANS:
+
+$.employee.payslips[?(@.month == "august" )].amount
+
+
+I.Q:
+{
+  "property1": "value1",
+  "property2": "value2"
+}
+
+ANS:
+$.property1,property2
+......................
+
+
+Develop a JSON path query to extract the price of the car and the bus.
+$.vehicles.*.price
+
+{
+  "vehicles": {
+    "car": {
+      "color": "blue",
+      "price": "$20,000"
+    },
+    "bus": {
+      "color": "white",
+      "price": "$120,000"
+    }
+  }
+}
+....
+IQ
+
+
+Develop a JSON path query to extract the models of all wheels.
+[
+  {
+    "model": "KDJ39848T",
+    "location": "front-right"
+  },
+  {
+    "model": "MDJ39485DK",
+    "location": "front-left"
+  },
+  {
+    "model": "KCMDD3435K",
+    "location": "rear-right"
+  },
+  {
+    "model": "JJDH34234KK",
+    "location": "rear-left"
+  }
+]
+
+ANS:
+$[*].model
+
+IQ
+
+
+Develop a JSON path query to extract the models of all wheels of the car.
+{
+  "car": {
+    "color": "blue",
+    "price": "$20,000",
+    "wheels": [
+      {
+        "model": "KDJ39848T",
+        "location": "front-right"
+      },
+      {
+        "model": "MDJ39485DK",
+        "location": "front-left"
+      },
+      {
+        "model": "KCMDD3435K",
+        "location": "rear-right"
+      },
+      {
+        "model": "JJDH34234KK",
+        "location": "rear-left"
+      }
+    ]
+  }
+}
+
+$.car.wheels[*].model
+
+
+I.Q
+Develop a JSON path query to extract models of all wheels of car and bus .
+{
+  "car": {
+    "color": "blue",
+    "price": "$20,000",
+    "wheels": [
+      {
+        "model": "KDJ39848T",
+        "location": "front-right"
+      },
+      {
+        "model": "MDJ39485DK",
+        "location": "front-left"
+      },
+      {
+        "model": "KCMDD3435K",
+        "location": "rear-right"
+      },
+      {
+        "model": "JJDH34234KK",
+        "location": "rear-left"
+      }
+    ]
+  },
+  "bus": {
+    "color": "white",
+    "price": "$120,000",
+    "wheels": [
+      {
+        "model": "BBBB39848T",
+        "location": "front-right"
+      },
+      {
+        "model": "BBBB9485DK",
+        "location": "front-left"
+      },
+      {
+        "model": "BBBB3435K",
+        "location": "rear-right"
+      },
+      {
+        "model": "BBBB4234KK",
+        "location": "rear-left"
+      }
+    ]
+  }
+}
+ $.*.wheels.[*].model
  
  
+ IQ
+ Retreive all the amount's paid to the employee from his payslips data.
+ 
+ {
+   "employee": {
+     "name": "john",
+     "gender": "male",
+     "age": 24,
+     "address": {
+       "city": "edison",
+       "state": "new jersey",
+       "country": "united states"
+     },
+     "payslips": [
+       {
+         "month": "june",
+         "amount": 1400
+       },
+       {
+         "month": "july",
+         "amount": 2400
+       },
+       {
+         "month": "august",
+         "amount": 3400
+       }
+     ]
+   }
+ }
+ 
+ $.employee.payslips.[*].amount
  
  
+ I.Q:
+ Give this a shot. Try to find the first names of all winners in the below list of Noble Prize Winners.
+ 
+ {
+   "prizes": [
+     {
+       "year": "2018",
+       "category": "physics",
+       "overallMotivation": "\"for groundbreaking inventions in the field of laser physics\"",
+       "laureates": [
+         {
+           "id": "960",
+           "firstname": "Arthur",
+           "surname": "Ashkin",
+           "motivation": "\"for the optical tweezers and their application to biological systems\"",
+           "share": "2"
+         },
+         {
+           "id": "961",
+           "firstname": "Gérard",
+           "surname": "Mourou",
+           "motivation": "\"for their method of generating high-intensity, ultra-short optical pulses\"",
+           "share": "4"
+         },
+         {
+           "id": "962",
+           "firstname": "Donna",
+           "surname": "Strickland",
+           "motivation": "\"for their method of generating high-intensity, ultra-short optical pulses\"",
+           "share": "4"
+         }
+       ]
+     },
+     {
+       "year": "2018",
+       "category": "chemistry",
+       "laureates": [
+         {
+           "id": "963",
+           "firstname": "Frances H.",
+           "surname": "Arnold",
+           "motivation": "\"for the directed evolution of enzymes\"",
+           "share": "2"
+         },
+         {
+           "id": "964",
+           "firstname": "George P.",
+           "surname": "Smith",
+           "motivation": "\"for the phage display of peptides and antibodies\"",
+           "share": "4"
+         },
+         {
+           "id": "965",
+           "firstname": "Sir Gregory P.",
+           "surname": "Winter",
+           "motivation": "\"for the phage display of peptides and antibodies\"",
+           "share": "4"
+         }
+       ]
+     },
+     {
+       "year": "2018",
+       "category": "medicine",
+       "laureates": [
+         {
+           "id": "958",
+           "firstname": "James P.",
+           "surname": "Allison",
+           "motivation": "\"for their discovery of cancer therapy by inhibition of negative immune regulation\"",
+           "share": "2"
+         },
+         {
+           "id": "959",
+           "firstname": "Tasuku",
+           "surname": "Honjo",
+           "motivation": "\"for their discovery of cancer therapy by inhibition of negative immune regulation\"",
+           "share": "2"
+         }
+       ]
+     },
+     {
+       "year": "2018",
+       "category": "peace",
+       "laureates": [
+         {
+           "id": "966",
+           "firstname": "Denis",
+           "surname": "Mukwege",
+           "motivation": "\"for their efforts to end the use of sexual violence as a weapon of war and armed conflict\"",
+           "share": "2"
+         },
+         {
+           "id": "967",
+           "firstname": "Nadia",
+           "surname": "Murad",
+           "motivation": "\"for their efforts to end the use of sexual violence as a weapon of war and armed conflict\"",
+           "share": "2"
+         }
+       ]
+     },
+     {
+       "year": "2018",
+       "category": "economics",
+       "laureates": [
+         {
+           "id": "968",
+           "firstname": "William D.",
+           "surname": "Nordhaus",
+           "motivation": "\"for integrating climate change into long-run macroeconomic analysis\"",
+           "share": "2"
+         },
+         {
+           "id": "969",
+           "firstname": "Paul M.",
+           "surname": "Romer",
+           "motivation": "\"for integrating technological innovations into long-run macroeconomic analysis\"",
+           "share": "2"
+         }
+       ]
+     },
+     {
+       "year": "2014",
+       "category": "peace",
+       "laureates": [
+         {
+           "id": "913",
+           "firstname": "Kailash",
+           "surname": "Satyarthi",
+           "motivation": "\"for their struggle against the suppression of children and young people and for the right of all children to education\"",
+           "share": "2"
+         },
+         {
+           "id": "914",
+           "firstname": "Malala",
+           "surname": "Yousafzai",
+           "motivation": "\"for their struggle against the suppression of children and young people and for the right of all children to education\"",
+           "share": "2"
+         }
+       ]
+     },
+     {
+       "year": "2017",
+       "category": "physics",
+       "laureates": [
+         {
+           "id": "941",
+           "firstname": "Rainer",
+           "surname": "Weiss",
+           "motivation": "\"for decisive contributions to the LIGO detector and the observation of gravitational waves\"",
+           "share": "2"
+         },
+         {
+           "id": "942",
+           "firstname": "Barry C.",
+           "surname": "Barish",
+           "motivation": "\"for decisive contributions to the LIGO detector and the observation of gravitational waves\"",
+           "share": "4"
+         },
+         {
+           "id": "943",
+           "firstname": "Kip S.",
+           "surname": "Thorne",
+           "motivation": "\"for decisive contributions to the LIGO detector and the observation of gravitational waves\"",
+           "share": "4"
+         }
+       ]
+     },
+     {
+       "year": "2017",
+       "category": "chemistry",
+       "laureates": [
+         {
+           "id": "944",
+           "firstname": "Jacques",
+           "surname": "Dubochet",
+           "motivation": "\"for developing cryo-electron microscopy for the high-resolution structure determination of biomolecules in solution\"",
+           "share": "3"
+         },
+         {
+           "id": "945",
+           "firstname": "Joachim",
+           "surname": "Frank",
+           "motivation": "\"for developing cryo-electron microscopy for the high-resolution structure determination of biomolecules in solution\"",
+           "share": "3"
+         },
+         {
+           "id": "946",
+           "firstname": "Richard",
+           "surname": "Henderson",
+           "motivation": "\"for developing cryo-electron microscopy for the high-resolution structure determination of biomolecules in solution\"",
+           "share": "3"
+         }
+       ]
+     },
+     {
+       "year": "2017",
+       "category": "medicine",
+       "laureates": [
+         {
+           "id": "938",
+           "firstname": "Jeffrey C.",
+           "surname": "Hall",
+           "motivation": "\"for their discoveries of molecular mechanisms controlling the circadian rhythm\"",
+           "share": "3"
+         },
+         {
+           "id": "939",
+           "firstname": "Michael",
+           "surname": "Rosbash",
+           "motivation": "\"for their discoveries of molecular mechanisms controlling the circadian rhythm\"",
+           "share": "3"
+         },
+         {
+           "id": "940",
+           "firstname": "Michael W.",
+           "surname": "Young",
+           "motivation": "\"for their discoveries of molecular mechanisms controlling the circadian rhythm\"",
+           "share": "3"
+         }
+       ]
+     }
+   ]
+ }
+ 
+ $.prizes.[*].firstname
  
  
+ ......
+ IQ
+ Let's mix things up. Try to find the first names of all winners of year 2014 in the below list of Noble Prize Winners.
+ $.prizes.[?( @.year == 2014 )].[*].firstname
+ 
+ {
+   "prizes": [
+     {
+       "year": "2018",
+       "category": "physics",
+       "overallMotivation": "\"for groundbreaking inventions in the field of laser physics\"",
+       "laureates": [
+         {
+           "id": "960",
+           "firstname": "Arthur",
+           "surname": "Ashkin",
+           "motivation": "\"for the optical tweezers and their application to biological systems\"",
+           "share": "2"
+         },
+         {
+           "id": "961",
+           "firstname": "Gérard",
+           "surname": "Mourou",
+           "motivation": "\"for their method of generating high-intensity, ultra-short optical pulses\"",
+           "share": "4"
+         },
+         {
+           "id": "962",
+           "firstname": "Donna",
+           "surname": "Strickland",
+           "motivation": "\"for their method of generating high-intensity, ultra-short optical pulses\"",
+           "share": "4"
+         }
+       ]
+     },
+     {
+       "year": "2018",
+       "category": "chemistry",
+       "laureates": [
+         {
+           "id": "963",
+           "firstname": "Frances H.",
+           "surname": "Arnold",
+           "motivation": "\"for the directed evolution of enzymes\"",
+           "share": "2"
+         },
+         {
+           "id": "964",
+           "firstname": "George P.",
+           "surname": "Smith",
+           "motivation": "\"for the phage display of peptides and antibodies\"",
+           "share": "4"
+         },
+         {
+           "id": "965",
+           "firstname": "Sir Gregory P.",
+           "surname": "Winter",
+           "motivation": "\"for the phage display of peptides and antibodies\"",
+           "share": "4"
+         }
+       ]
+     },
+     {
+       "year": "2018",
+       "category": "medicine",
+       "laureates": [
+         {
+           "id": "958",
+           "firstname": "James P.",
+           "surname": "Allison",
+           "motivation": "\"for their discovery of cancer therapy by inhibition of negative immune regulation\"",
+           "share": "2"
+         },
+         {
+           "id": "959",
+           "firstname": "Tasuku",
+           "surname": "Honjo",
+           "motivation": "\"for their discovery of cancer therapy by inhibition of negative immune regulation\"",
+           "share": "2"
+         }
+       ]
+     },
+     {
+       "year": "2018",
+       "category": "peace",
+       "laureates": [
+         {
+           "id": "966",
+           "firstname": "Denis",
+           "surname": "Mukwege",
+           "motivation": "\"for their efforts to end the use of sexual violence as a weapon of war and armed conflict\"",
+           "share": "2"
+         },
+         {
+           "id": "967",
+           "firstname": "Nadia",
+           "surname": "Murad",
+           "motivation": "\"for their efforts to end the use of sexual violence as a weapon of war and armed conflict\"",
+           "share": "2"
+         }
+       ]
+     },
+     {
+       "year": "2018",
+       "category": "economics",
+       "laureates": [
+         {
+           "id": "968",
+           "firstname": "William D.",
+           "surname": "Nordhaus",
+           "motivation": "\"for integrating climate change into long-run macroeconomic analysis\"",
+           "share": "2"
+         },
+         {
+           "id": "969",
+           "firstname": "Paul M.",
+           "surname": "Romer",
+           "motivation": "\"for integrating technological innovations into long-run macroeconomic analysis\"",
+           "share": "2"
+         }
+       ]
+     },
+     {
+       "year": "2014",
+       "category": "peace",
+       "laureates": [
+         {
+           "id": "913",
+           "firstname": "Kailash",
+           "surname": "Satyarthi",
+           "motivation": "\"for their struggle against the suppression of children and young people and for the right of all children to education\"",
+           "share": "2"
+         },
+         {
+           "id": "914",
+           "firstname": "Malala",
+           "surname": "Yousafzai",
+           "motivation": "\"for their struggle against the suppression of children and young people and for the right of all children to education\"",
+           "share": "2"
+         }
+       ]
+     },
+     {
+       "year": "2017",
+       "category": "physics",
+       "laureates": [
+         {
+           "id": "941",
+           "firstname": "Rainer",
+           "surname": "Weiss",
+           "motivation": "\"for decisive contributions to the LIGO detector and the observation of gravitational waves\"",
+           "share": "2"
+         },
+         {
+           "id": "942",
+           "firstname": "Barry C.",
+           "surname": "Barish",
+           "motivation": "\"for decisive contributions to the LIGO detector and the observation of gravitational waves\"",
+           "share": "4"
+         },
+         {
+           "id": "943",
+           "firstname": "Kip S.",
+           "surname": "Thorne",
+           "motivation": "\"for decisive contributions to the LIGO detector and the observation of gravitational waves\"",
+           "share": "4"
+         }
+       ]
+     },
+     {
+       "year": "2017",
+       "category": "chemistry",
+       "laureates": [
+         {
+           "id": "944",
+           "firstname": "Jacques",
+           "surname": "Dubochet",
+           "motivation": "\"for developing cryo-electron microscopy for the high-resolution structure determination of biomolecules in solution\"",
+           "share": "3"
+         },
+         {
+           "id": "945",
+           "firstname": "Joachim",
+           "surname": "Frank",
+           "motivation": "\"for developing cryo-electron microscopy for the high-resolution structure determination of biomolecules in solution\"",
+           "share": "3"
+         },
+         {
+           "id": "946",
+           "firstname": "Richard",
+           "surname": "Henderson",
+           "motivation": "\"for developing cryo-electron microscopy for the high-resolution structure determination of biomolecules in solution\"",
+           "share": "3"
+         }
+       ]
+     },
+     {
+       "year": "2017",
+       "category": "medicine",
+       "laureates": [
+         {
+           "id": "938",
+           "firstname": "Jeffrey C.",
+           "surname": "Hall",
+           "motivation": "\"for their discoveries of molecular mechanisms controlling the circadian rhythm\"",
+           "share": "3"
+         },
+         {
+           "id": "939",
+           "firstname": "Michael",
+           "surname": "Rosbash",
+           "motivation": "\"for their discoveries of molecular mechanisms controlling the circadian rhythm\"",
+           "share": "3"
+         },
+         {
+           "id": "940",
+           "firstname": "Michael W.",
+           "surname": "Young",
+           "motivation": "\"for their discoveries of molecular mechanisms controlling the circadian rhythm\"",
+           "share": "3"
+         }
+       ]
+     }
+   ]
+ }
