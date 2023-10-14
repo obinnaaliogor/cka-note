@@ -6576,3 +6576,253 @@ Develop a JSON path query to extract models of all wheels of car and bus .
      }
    ]
  }
+ 
+ 
+ 
+
+ JSON PATH – Lists:
+ $[-1:0] --> start from the last all the way to the first top
+ 
+ ....................
+ 
+
+ JSON PATH Use case – Kubernetes:
+ When query the kubernetes api via the kubectl utility, it returns an output in json but to make it human readyable, it does not give us the entire output in json.
+ kubectl get nodes -o wide --> This give info about the node.
+ Say we want to get a specific output about the node architecture, cpu count, taints etc. we will use the jsonpath query to get this done.
+ 
+ e.g.  NAME         CPU.      NAME            TAINTS
+       master       4         master          node-role.kubernetes.io/master
+       node01.      4         node01
+	   
+	   NAME       ARCHITECTURE
+	   master     amd64
+	   node01.    amd64
+	   
+	   
+	   NAME          IMAGE
+	   red           nginx
+	   blue.         ubuntu
+	   yellow        redis
+ 
+ 
+	   STEPS TO USE JSON PATH IN K8S
+	   
+1. Command that will give you the required info in raw format
+k get nodes
+k get pods
+
+2. Familiarize with json output.
+k get nodes -o json
+k get pods -o json
+
+3. Form the json path query that will retreive the reqiured info for you.
+
+example:
+
+.items[0].spec.containers[0].image --> to retreive image
+$ not mandatory as kubectl adds it..
+
+4. Use the json path query with kubectl command:
+the query u developed
+
+kubectl get pods -o=jsonpath= .items[0].spec.containers[0].image
+
+you must encapsulated it with a single quote with curly bracket:
+
+kubectl get pods -o=jsonpath='{ .items[0].spec.containers[0].image }'
+
+Predefining and formating optios:
+{"\n"} ---> new line incase you want to combine 2 jsonpath query, it should be inbetween the 2 querys.
+
+{"\t"} --> tab
+
+
+LOOPS USING RANGES:
+With ranges, we organize the jsonpath query and to iterate each items in the list and print its property.
+
+e.g
+
+FOR EACH NODE 
+PRINT NODE NAME \t PRINT CPU COUNT \n
+END FOR
+
+'{ranges .items[*]}
+{.metadata.name} {"\t"} {.status.capacity.cpu} {"\n"}
+{end}'
+
+merge the above as a single entry and pass it on as an option the kubectl utility when querying the object in json..
+
+kubectl get nodes -o=jsonpath='{ranges .items[*]} {.metadata.name} {"\t"} {.status.capacity.cpu} {"\n"} {end}'
+
+JSONPATH WITH CUSTOM colums:
+
+kubectl get nodes -o=custom-cloumns=<columname>:jasnpath
+
+example:
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "name": "nginx-pod",
+    "namespace": "default"
+  },
+  "spec": {
+    "containers": [
+      {
+        "image": "nginx:alpine",
+        "name": "nginx"
+      }
+    ],
+    "nodeName": "node01"
+  }
+}
+
+Develop a JSON PATH query to get the image name under the containers section.
+$.spec.containers[0].image
+
+......................
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "name": "nginx-pod",
+    "namespace": "default"
+  },
+  "spec": {
+    "containers": [
+      {
+        "image": "nginx:alpine",
+        "name": "nginx"
+      },
+      {
+        "image": "redis:alpine",
+        "name": "redis-container"
+      }
+    ],
+    "nodeName": "node01"
+  },
+  "status": {
+    "conditions": [
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2019-06-13T05:34:09Z",
+        "status": "True",
+        "type": "Initialized"
+      },
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2019-06-13T05:34:09Z",
+        "status": "True",
+        "type": "PodScheduled"
+      }
+    ],
+    "containerStatuses": [
+      {
+        "image": "nginx:alpine",
+        "name": "nginx",
+        "ready": false,
+        "restartCount": 4,
+        "state": {
+          "waiting": {
+            "reason": "ContainerCreating"
+          }
+        }
+      },
+      {
+        "image": "redis:alpine",
+        "name": "redis-container",
+        "ready": false,
+        "restartCount": 2,
+        "state": {
+          "waiting": {
+            "reason": "ContainerCreating"
+          }
+        }
+      }
+    ],
+    "hostIP": "172.17.0.75",
+    "phase": "Pending",
+    "qosClass": "BestEffort",
+    "startTime": "2019-06-13T05:34:09Z"
+  }
+}
+
+We now have POD status too. Develop a JSON PATH query to get the phase of the pod under the status section.
+
+Scroll down if you can't see the status section
+$.status.phase
+.................
+
+
+Develop a JSON PATH query to get the reason for the state of the container under the status section.
+
+Scroll down if you can't see the status section
+
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "name": "nginx-pod",
+    "namespace": "default"
+  },
+  "spec": {
+    "containers": [
+      {
+        "image": "nginx:alpine",
+        "name": "nginx"
+      },
+      {
+        "image": "redis:alpine",
+        "name": "redis-container"
+      }
+    ],
+    "nodeName": "node01"
+  },
+  "status": {
+    "conditions": [
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2019-06-13T05:34:09Z",
+        "status": "True",
+        "type": "Initialized"
+      },
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2019-06-13T05:34:09Z",
+        "status": "True",
+        "type": "PodScheduled"
+      }
+    ],
+    "containerStatuses": [
+      {
+        "image": "nginx:alpine",
+        "name": "nginx",
+        "ready": false,
+        "restartCount": 4,
+        "state": {
+          "waiting": {
+            "reason": "ContainerCreating"
+          }
+        }
+      },
+      {
+        "image": "redis:alpine",
+        "name": "redis-container",
+        "ready": false,
+        "restartCount": 2,
+        "state": {
+          "waiting": {
+            "reason": "ContainerCreating"
+          }
+        }
+      }
+    ],
+    "hostIP": "172.17.0.75",
+    "phase": "Pending",
+    "qosClass": "BestEffort",
+    "startTime": "2019-06-13T05:34:09Z"
+  }
+}
+
+$.status.containerStatuses[0].state.waiting.reason
