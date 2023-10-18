@@ -59,7 +59,8 @@ kubectl create deployment --image=nginx nginx --replicas=4 --dry-run=client -o y
 
 ETCD – Commands (Optional)
 
-(Optional) Additional information about ETCDCTL UtilityETCDCTL is the CLI tool used to interact with ETCD.ETCDCTL can interact with ETCD Server using 2 API versions – Version 2 and Version 3.  By default it’s set to use Version 2. Each version has different sets of commands.
+(Optional) Additional information about ETCDCTL Utility. ETCDCTL is the CLI tool used to interact with ETCD. ETCDCTL can interact with ETCD Server using 2 API versions – Version 2 and Version 3.  
+By default it’s set to use Version 2. Each version has different sets of commands.
 
 For example, ETCDCTL version 2 supports the following commands:
 
@@ -277,7 +278,7 @@ tolerations:
               - linux
 			  
 NOTE:
-With taint and tolerations and node affinity rule, we are able to dedicated our node for a specific pod.
+With taint and tolerations and node affinity rule, we are able to dedicate our node for a specific pod.
 
 Resource Limit:
 OOM kill, out of memory, this occurs when a container trys to consume more memory than stated or allowed.
@@ -301,7 +302,7 @@ For example you cannot edit the environment variables, service accounts, resourc
 1. Run the kubectl edit pod <pod name> command.  This will open the pod specification in an editor (vi editor). Then edit the required properties. 
 When you try to save it, you will be denied. This is because you are attempting to edit a field on the pod that is not editable.
 
-A copy of the file with your changes is saved in a temporary location as shown above.
+A copy of the file with your changes is saved in a temporary location as shown below.
 
 You can then delete the existing pod by running the command:
 
@@ -341,7 +342,7 @@ This ensures a copy of the pod is always present in each node the cluster.
 StaticPods:
 
 These are pods created by the kubelet independent of the cluster components.
-The template of the pods and saved in a directory and the path to the location of these pods definition files are passed in the kubelet configuration files.
+The template of the pods are saved in a directory and the path to the location of these pods definition files are passed in the kubelet configuration files.
 The kubelet checks this path regularly to create pods placed in it. 
 If the pods definition files are removed from that directory the pods will be deleted.
 However, if these pods are not removed from the directory and are simply deleted, the kubelet will recreate the pod.
@@ -352,13 +353,13 @@ The path is passed as options to the kubelet conf file (kubelet.service)
 
 The pods you see running the cluster controlplane component are created by the kubelet.
 The kubelet also takes instruction from the kube-apiserver via an api http endpoint and creates other pods.
-What you see when you run the kubectl get pods -n kube-system is just read only a mirror of the staticpods or controlplane component created by the kubelete.
+What you see when you run the kubectl get pods -n kube-system is just read only mirror of the staticpods or controlplane component created by the kubelet.
 You cannot be able to delete these pods or modify it.
 When staticpods are created, the nodename running the pod is appended to the name of the pod.
 
 USE CASE:
 ...
-check staticpod config.yaml file for path where the static pod files are or are created.
+check kubelet config.yaml file for path where the staticpod files are or are created.
 /var/lib/kubelet/config.yaml
 look for staticPodPath or --pod-manifest-path=/etc/Kubernetes/manifests
 
@@ -490,7 +491,8 @@ They comm bw each using localhost.
  
 
  But at times you may want to run a process that runs to completion in a container. For example a process that pulls a code or binary from a repository that will be used by the main web application. 
- That is a task that will be run only one time when the pod is first created. Or a process that waits for an external service or database to be up before the actual application starts. That’s where initContainers comes in.
+ That is a task that will be run only one time when the pod is first created. Or a process that waits for an external service or database to be up before the actual application starts. 
+ That’s where initContainers comes in.
 
  
 
@@ -577,7 +579,7 @@ They comm bw each using localhost.
 	 When you drain a node, the nodes are marked unschedulable and  cordoned. 
 	 This means no pod will be scheduled on that node till you remove the restrictions.
 	 Run:
-	 kubectl uncordon node-0 to make the node available to receive pods on it, however pods running on that node b4 it was drained dont automatically fallback. 
+	 kubectl uncordon node-01 to make the node available to receive pods on it, however pods running on that node b4 it was drained dont automatically fallback. 
 	 only new workloads can now be scheduled on the node.
 	 
 	 Important:
@@ -592,7 +594,7 @@ They comm bw each using localhost.
 	 
 	 
 	 Important:
-	 when you try to drain a node that has a pod running on it that is not part of a replicaset or not controlled by a replicaset with this command:
+	 when you try to drain a node that has a pod running on it that is not part of a replicaset or not controlled by a replication controller, youll have error till you use --force which is force:
 	 kubectl drain node01 --ignore-daemonsets 
 	 
 	 ERROR:
@@ -605,8 +607,8 @@ They comm bw each using localhost.
 	  node01
 	 cannot delete Pods declare no controller (use --force to override): default/hr-app.
 	 
-	 Note: This is b/c once the node is drainned that pod that is not controlled by replicaset will be deleted and not com back.
-	 so k8s impliments that restrictions and to continue youll have to use the --force options.
+	 Note: This is b/c once the node is drainned that pod that is not controlled by replicaset will be deleted and not come back.
+	 so k8s impliments that restrictions and to continue you'll have to use the --force options.
 	  kubectl drain node01 --ignore-daemonsets --force
 	  
 	  
@@ -797,7 +799,7 @@ They comm bw each using localhost.
 
 	   ---
 	   Taking a backup of your etcd cluster is a good approach to securing and making your k8s cluster and recovering it in case of disaster.
-	   Back of some of the resources in your cluster can be done by querying the kube-apiserver by running
+	   Backup of the resources in your cluster can be done by querying the kube-apiserver by running
 	   
 	   kubectl get all --all -namespaces -o yaml > all-deploy-service.yaml
 	   
@@ -927,7 +929,7 @@ They comm bw each using localhost.
 			 kubectl config use-context cluster2 --> Set the current-context in a kubeconfig file
 			 
 			 
-			 What is the default data directory used the for ETCD datastore used in cluster1?
+			 What is the default data directory used in the ETCD datastore used in cluster1?
 			 Remember, this cluster uses a Stacked ETCD topology.
 			 Meaning runs in a pod..
 			
@@ -944,9 +946,11 @@ They comm bw each using localhost.
 						
 						This will list the members of the etcd..
 						
-						
+						IMPORTANT:
 						COPY FROM ONE SERVER TO ANOTHER.
 						YOU HAVE TO BE IN THE DESTINATION SERVER.
+						1. Take a backup in the specified context, move back to the student node and run an scp command frm there..
+						2. When you want to restore, you copy the back from the student node to the context u want to restore and ssh to the context and run the restore..
 						
 						scp cluster1-controlplane:/opt/snapshot.db /opt
 						or
@@ -959,7 +963,7 @@ They comm bw each using localhost.
 						from what source or path to the file? :/opt/snapshot.db
 						to what destination? /opt
 						
-						
+						IMPORTANT:
 						2. How does the api-server communicate with the etcd?
 						It uses the etcd server url https://127.0.0.1:2379 in a stacked etcd but for external etcd, the ip will change, it will be the ip of the external etcd server.
 						
@@ -967,9 +971,13 @@ They comm bw each using localhost.
 						Youll always save snapshot in a safe location, so if workloads goes down in a specific server, you scp the snapshot to the server and restore the server using the backup file..
 						
 						
-						Security:
 						
-						Kubernetes priv=mitives..
+						
+						
+						Security:
+						-----------------------
+						
+						Kubernetes primitives..
 						Network Policies..
 						The Kube-apiserver being at the center of k8s. Every other component in the cluster talks to the apiserver.
 						Our goal would be start with it as our first line of defense, securing the kube-apiserver. How can we do this? This is defined by:
@@ -991,7 +999,7 @@ They comm bw each using localhost.
 						Communication between the various components in the kubernetes cluster is secured using TLS-CERTIFICATE.
 						
 						Important: By default all pods can talk to any pods in the cluster..
-						How can limit/restrict communication between pods in the cluster?, we use network policy to do this.
+						How can we limit/restrict communication between pods in the cluster?, we use network policy to do this.
 						
 						
 						
@@ -1000,7 +1008,8 @@ They comm bw each using localhost.
 						Article on Setting up Basic Authentication
 						Setup basic authentication on Kubernetes (Deprecated in 1.19)
 
-						    Note: This is not recommended in a production environment. This is only for learning purposes. Also note that this approach is deprecated in Kubernetes version 1.19 and is no longer available in later releases
+						    Note: This is not recommended in a production environment. This is only for learning purposes.
+							Also note that this approach is deprecated in Kubernetes version 1.19 and is no longer available in later releases
 
 						Follow the below instructions to configure basic authentication in a kubeadm setup.
 
@@ -1276,7 +1285,7 @@ They comm bw each using localhost.
 						Communications.
 						
 						1. Since all components interacts with the kube-apiserver, we will generate a certificate called.
-						apiserver.crt and apiserver.crt
+						apiserver.crt and apiserver.key
 						
 						i. Also the apiserver is a client to the kubelet b/c it interacts with the kubelet with instructions to create a pod.
 						so we generate a set of certificate for it communicate with the kubelet.
@@ -1304,8 +1313,10 @@ They comm bw each using localhost.
 						so we generate a set of certificate for it communicate with the apiserver.
 						controller-manager.crt and controller-manager.key
 						
-						6. The kube-proxy is another component who's a client to the kube-apiserver, it interacts with the kube-apiserver to get updates to changes in service configurations, kube proxy needs to be aware
-						when services are created, updated, or deleted, kube proxy needs to update its network rules accordingly to ensure that traffic is properly routed to the correct service endpoints. 
+						6. The kube-proxy is another component who's a client to the kube-apiserver, it interacts with the kube-apiserver to get updates to changes in service configurations, 
+						kube proxy needs to be aware
+						when services are created, updated, or deleted, 
+						kube proxy needs to update its network rules accordingly to ensure that traffic is properly routed to the correct service endpoints. 
 						To acheive this it watches the kubernetes API SERVER for changes in configuration.
 						so we generate a set of certificate for it to communicate with the apiserver.
 						kube-proxy.crt and kube-proxy.key
@@ -1319,7 +1330,7 @@ They comm bw each using localhost.
 						 We called root certificate, ca.crt and ca.key
 						 
 						 
-						 Important: You can you a diff CA which is not the one used for the other k8s component to sign the etcd certificates. 
+						 Important: You can have a diff CA which is not the one used for the other k8s component to sign the etcd certificates. 
 						 If you do, it means that same CA will have to sign the certificate that the kube-apiserver will use to authenticate with the etcd.
 						 
 						 However, of all the other components in the cluster we use one CA to sign their certificates....
@@ -1382,7 +1393,7 @@ They comm bw each using localhost.
 						
 						2. Create a certificate for the kube-scheduler
 						The kube-scheduler is a system componet its name should be prefixed with the key word system.
-						1. We generate key for the admin user.
+						1. We generate key for the scheduler.
 						openssl genrsa -out scheduler.key 2048
 						output scheduler.key
 						
@@ -1441,7 +1452,7 @@ They comm bw each using localhost.
 						If everything is set up correctly, the `curl` command should be able to communicate with the Kubernetes API server and retrieve information about pods in your cluster.
 						
 						
-						NOW HAVE CREATE CERTIFICATE FOR THE KUBE-APISERVER.
+						NOW WE HAVE CREATED CERTIFICATE FOR THE KUBE-APISERVER.
 						The kube-apiserver is the most popular component in the kubernetes cluster.
 						Everyone talks to the kube-apiserver, every operations goes through the kube-apiserver, anything moving in the cluster the apiserver knows about it.
 						You need information, you talk to the apiserver.
@@ -1452,8 +1463,9 @@ They comm bw each using localhost.
 						In most cases, it is also refferred to as by the IP.. i.e The IP address of the host or the pod running the kube-apiserver.
 						
 						All these names most be present in the certificate generated for the kube-apiserver.
-						This names should be passed in the  common Name (CN) "/CN=kube-apiserver" while generating the csr. So anyone connecting to the kube-apiserver using these known names can reach it
-						or establish a valid connection.
+						This names should be passed in the  common Name (CN) "/CN=kube-apiserver" while generating the csr. 
+						So anyone connecting to the kube-apiserver using these known names can reach it or establish a valid connection.
+						
 						NB: The csr is a certificate without a signature.
 						
 						Important: These names cannot be passed via the command line, Youll have to create an openssl.cnf configuration file 
@@ -1486,7 +1498,7 @@ They comm bw each using localhost.
 					
 					RUN:
 					
-					1. We generate key for the admin user.
+					1. We generate key for the kube-apiserver.
 					openssl genrsa -out apiserver.key 2048
 					output apiserver.key
 					
@@ -1500,7 +1512,7 @@ They comm bw each using localhost.
 					    -CAcreateserial -out apiserver.crt -days 1000 \
 					    -extensions v3_req -extfile openssl.cnf 
 	     
-						output apiserver.csr
+						output apiserver.crt
 					
 						Important:
 						While configuring the kube-apiserver executable, Youll have to pass all the certificate and the CA certificate at each aspect in the configuration that it uses to communicate
@@ -1642,27 +1654,31 @@ They comm bw each using localhost.
 					    openssl req -new -key jane.key -subj "CN/=jane" -out jane.csr
 					     output jane.csr
 						 
-						 She then sends me this CSR, as the only one with access to the cluster where the CA KEY AND CA cert are i use these to sign the users CSR and sends it back the certificate to her
+						 She then sends me this CSR, as the only one with access to the cluster where the CA KEY AND CA cert are i use these to sign the users CSR and send back the certificate to her
 						 for an access to the cluster. This certificate has a validity period, i keep rotating the certificate each time it expires by asking her to generate a new one and i sign it with the CA
 						 
 						 Each time a new user joins again, the process is repeated and when the number of users increases this becomes a tidious job..
 						 
 						 The Certificate API, allows us to automate the process of certificate approval and deny.
-						 It allows us to secure of CA servers which is a safe storage of the CAkey and CA cert used in signing the csr.
-						 There4 the CA server is nothing but a server where we safe store the CAkey and CA certificates.. Anyone with access to this server can create as many users as they want and with any permission they want.
-						 This is why we need to secure the CA server..
+						 It allows us to secure the CA servers which is a safe storage of the CAkey and CA cert used in signing the csr.
+						 There4 the CA server is nothing but a server where we safe store the CAkey and CA certificates.. 
+						 Anyone with access to this server can create as many users as they want and with any permission they want.
 						 
-						 Automating CERTIFICATE SIGNING:
+
+This is why we need to secure the CA server..
 						 
-						 Kubernetes has a certificate API, with certificate api you can send csr to the CA server and all administrator will see this as pending csr in the cluster.
+						
+Automating CERTIFICATE SIGNING:
+------------------------------ 
+Kubernetes has a certificate API, with certificate api you can send csr to the CA server and all administrator will see this as pending csr in the cluster.
 						 
-						 Process: 
-						 The new user generates a set of keys, create a csr and send the csr to me the admin user.
-						 The admin user creates a CertificateSingingRequest object. In this CSR object, the details of the new users csr is enterred into it.
-						 Things like the encoded csr.
+Process: 
+The new user generates a set of keys, create a csr and send the csr to me the admin user.
+The admin user creates a CertificateSingingRequest object. In this CSR object, the details of the new users csr is enterred into it.
+Things like the encoded csr.
 						 
-						 Example:
-						 apiVersion: certificates.k8s.io/v1
+ Example:
+			             apiVersion: certificates.k8s.io/v1
 						 kind: CertificateSigningRequest
 						 metadata:
 						   name: jane-csr
@@ -1712,7 +1728,7 @@ They comm bw each using localhost.
  						   name: jane
  						 spec:
  						   request: <base64_encoded_csr>
- 						   groups: <The group the user belongs to in linux eg system:masters or system:authenticated, theyre all list and should have ->
+ 						   groups: <The group the user belongs to in linux eg system:masters or system:authenticated, theyre all list and should have -
  						   usages:  ---> The use of the certificate, just for auth or gital signature or key encipherment. They all list and should have -, ?
  						   - client auth
 						
@@ -1728,6 +1744,21 @@ They comm bw each using localhost.
 						    request is the base64 encoded value of the CSR file content. You can get the content using this command:
 							
 							cat jane.csr | base64 | tr -d "\n"
+							The command you provided is used to encode a Certificate Signing Request (CSR) in base64 format and remove newline characters from the resulting encoded string. 
+							Here's how it works step by step:
+
+							1. `cat jane.csr`: This part of the command reads the contents of the file `jane.csr` and outputs it to the standard output.
+
+							2. `|`: This pipe character takes the output from the previous command and passes it as input to the next command.
+
+							3. `base64`: This command encodes the input data in base64 format, making it suitable for use in various data transmission and storage purposes.
+
+							4. `|`: Another pipe character to pass the base64-encoded data to the next command.
+
+							5. `tr -d "\n"`: This `tr` command is used to delete (remove) newline characters (`\n`) from the input data.
+
+							When you run this entire command, it will read the contents of the `jane.csr` file, encode it in base64, 
+							and then remove any newline characters from the base64-encoded output. The result will be a single, continuous base64-encoded string without line breaks.
 							
 							
 						
@@ -1768,7 +1799,7 @@ They comm bw each using localhost.
 							All of the certificate signing operations are done by the kube-controller-manager.
 							It uses controllers like CSR approving CSR signing to do all of these for us.
 							
-							We know that for anyone to sign certificate, the need the CA server root certificate and key.
+							We know that for anyone to sign certificate, they need the CA server root certificate and key.
 							Does the controller manager have these keys?
 							
 							If you cat /etc/kubernetes/manifests/kube-controller-manager youll notice an option in the kube-controller-manager called 
@@ -1814,7 +1845,8 @@ They comm bw each using localhost.
 							This is the default place where the kubectl command line utility goes first to check for the kubeconfig file b4 performing your actions.
 							
 							Important:
-							You have not been specifying the cacert,key,cert options when calling the kubernetes api b/c theyre already in the .kube folder and kubectl check that folder and uses the file in there.
+							You have not been specifying the cacert,key,cert options when calling the kubernetes api b/c theyre already in the .kube folder and kubectl check that folder 
+							and uses the file in there.
 							
 							The config file or the kubeconfig file is in a specific format:
 							
@@ -1833,6 +1865,13 @@ They comm bw each using localhost.
 							 Access to the test cluster requires authentication by username and password.
 
 							Create a directory named config-exercise. In your config-exercise directory, create a file named config-demo with this content:
+							
+Important: To see only the configuration information associated with the current context, use the --minify flag.
+
+kubectl config --kubeconfig=config-demo view --minify
+
+This link tells you all you need about the kubeconfig --; https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/
+							
 							
 							
 
@@ -1864,6 +1903,7 @@ They comm bw each using localhost.
 							Once you have been authenticated, what you can do defines authorization...
 							As an admin of the cluster, you're able to create and delete resources in the kubernetes cluster.
 							As the workloads grows, and new users join your org.. You wont give them the same access to yours, youll limit their access based on their tasks in the cluster.
+							
 							SAY FOR A:
 							Developer, Bot or serviceaccount you will not grant these entities the access to delete nodes and modify certain resources in the cluster.
 							Authorization granted to them, defines the actions they can take in the k8s cluster. 
@@ -1909,7 +1949,7 @@ They comm bw each using localhost.
 							  We create the role, by running kubectl create -f <path-to-the-file>
 							  
 							  NEXT:
-							  We link the user/users to that role we have created.. To do this we create another object called RoleBinding...
+							  We link the user/users/groups/sa to that role we have created.. To do this we create another object called RoleBinding...
 							  
 							  example: 
 							  apiVersion: rbac.authorization.k8s.io/v1
@@ -2090,8 +2130,10 @@ They comm bw each using localhost.
 									 VERY VERY IMPORTANT:
 									 As you know, there are certain groups that exists in the kubernetes cluster and examples of such groups include system:masters.
 									 Note that once you create a key and csr for a user and sign that CSR using the CA key and CAcert to get the user authenticated to the cluster.
-									 If in creating the csr you added the user to OU system:masters, and when granting authorization to the user using RBAC, you create a clusterrole say to create, delete, get pods and deployments
-									 and binds its using clusterrolebinding and in the subject you specify kind as Group and name as system:masters b/c that user was added to the group system:masters when generating the 
+									 If in creating the csr you added the user to OU system:masters, and when granting authorization to the user using RBAC, 
+									 you create a clusterrole say to create, delete, get pods and deployments
+									 and binds its using clusterrolebinding and in the subject you specify kind as Group and name as system:masters b/c 
+									 that user was added to the group system:masters when generating the 
 									 csr will he/she inherite the clusterrole associated to that group system:masters???
 									 
 									 Can we also add a user to a non existing OU in kubernetes when generating CSR for authentication and use that group while creating RBAC to grant permission?? 
@@ -2171,7 +2213,7 @@ They comm bw each using localhost.
 										   Save this YAML to a file, e.g., serviceaccount.yaml, and apply it using kubectl apply -f serviceaccount.yaml.
 
 									2. Create a TokenRequest with an expiration time. You can specify the expiration time in seconds from the current time. 
-											F  or example, to generate a token that expires in 1 hour (3600 seconds):
+											For example, to generate a token that expires in 1 hour (3600 seconds):
 									
 											apiVersion: authentication.k8s.io/v1
 											kind: TokenRequest
@@ -2195,7 +2237,14 @@ They comm bw each using localhost.
 							
 							  This way the tokenRequest API gets associated to a service account.
 							  
-											  
+							  -------------------------------------------
+							  
+							  Doing this imperatively:
+							  1. kubectl create serviceaccount my-serviceaccount
+							  2. kubectl create token my-serviceaccount <tokenname>
+							  you can ignore token name
+							  
+							  This creates a sa and a token for that sa
 											  
 											  Save this YAML to a file, e.g., tokenrequest.yaml, and apply it using kubectl apply -f tokenrequest.yaml.
 
@@ -2322,7 +2371,8 @@ They comm bw each using localhost.
 	   So we can then create a pod object, associate the service account and mount the token as a projected volume ???
 	   
 	   
-	   Exactly, that's the workflow. Once you've created the `TokenRequest` associated with a specific ServiceAccount, you can create a pod object, specify the ServiceAccount you want to use for that pod, and mount the token as a projected volume in the pod. Here's a step-by-step breakdown:
+	   Exactly, that's the workflow. Once you've created the `TokenRequest` associated with a specific ServiceAccount, you can create a pod object, specify the ServiceAccount you want to use  
+	   for that pod, and mount the token as a projected volume in the pod. Here's a step-by-step breakdown:
 
 	   1. Create a `TokenRequest` associated with a ServiceAccount as shown earlier.
 
@@ -2359,10 +2409,28 @@ They comm bw each using localhost.
 	   Refference:
 	   ----
 	   https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/#bound-service-account-token-volume
+	   https://kubernetes.io/docs/concepts/storage/projected-volumes/
+	   search token as a projected volume
+	   the default duration for a token is 3600 but you can use --duration flag to increase the time.
+	   
+	   
+	   Important:
+
+	   pods is forbidden: User "system:serviceaccount:default:default" cannot list resource "pods" in API group "" in the namespace "default" 
+	   
+	   explain IN RBAC
+	   this is in the default namespace
+	   subjects:
+	   - kind: system:serviceaccount
+	     name: default # Name is case sensitive
+		 namespace: default
+	   
+	   
  
  
 
 	   Image Security:
+	   ==========================
 	   
 	   https://kubernetes.io/docs/concepts/containers/images/
 	   https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
@@ -4941,7 +5009,7 @@ How do we stop this from happening?
 How do we solve this?
 1. They must not run in paralle.
 2. They run in an active standy mode
-3 node is active on one node and the other on the second node is on standy...
+3 ONE is active on one node and the other on the second node is on standy...
 
 Who decides which is active and which is passive/stadby??????///
 This is achived through a leader elect process!!
@@ -6979,3 +7047,173 @@ IQ
 }
 
 $.status.containerStatuses[?(@.name == "redis-container")].restartCount
+
+..............
+
+
+{
+  "kind": "Config",
+  "apiVersion": "v1",
+  "preferences": {},
+  "clusters": [
+    {
+      "name": "development",
+      "cluster": {
+        "server": "KUBE_ADDRESS",
+        "certificate-authority": "/etc/kubernetes/pki/ca.crt"
+      }
+    },
+    {
+      "name": "kubernetes-on-aws",
+      "cluster": {
+        "server": "KUBE_ADDRESS",
+        "certificate-authority": "/etc/kubernetes/pki/ca.crt"
+      }
+    },
+    {
+      "name": "production",
+      "cluster": {
+        "server": "KUBE_ADDRESS",
+        "certificate-authority": "/etc/kubernetes/pki/ca.crt"
+      }
+    },
+    {
+      "name": "test-cluster-1",
+      "cluster": {
+        "server": "KUBE_ADDRESS",
+        "certificate-authority": "/etc/kubernetes/pki/ca.crt"
+      }
+    }
+  ],
+  "users": [
+    {
+      "name": "aws-user",
+      "user": {
+        "client-certificate": "/etc/kubernetes/pki/users/aws-user/aws-user.crt",
+        "client-key": "/etc/kubernetes/pki/users/aws-user/aws-user.key"
+      }
+    },
+    {
+      "name": "dev-user",
+      "user": {
+        "client-certificate": "/etc/kubernetes/pki/users/dev-user/developer-user.crt",
+        "client-key": "/etc/kubernetes/pki/users/dev-user/dev-user.key"
+      }
+    },
+    {
+      "name": "test-user",
+      "user": {
+        "client-certificate": "/etc/kubernetes/pki/users/test-user/test-user.crt",
+        "client-key": "/etc/kubernetes/pki/users/test-user/test-user.key"
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "name": "aws-user@kubernetes-on-aws",
+      "context": {
+        "cluster": "kubernetes-on-aws",
+        "user": "aws-user"
+      }
+    },
+    {
+      "name": "research",
+      "context": {
+        "cluster": "test-cluster-1",
+        "user": "dev-user"
+      }
+    },
+    {
+      "name": "test-user@development",
+      "context": {
+        "cluster": "development",
+        "user": "test-user"
+      }
+    },
+    {
+      "name": "test-user@production",
+      "context": {
+        "cluster": "production",
+        "user": "test-user"
+      }
+    }
+  ],
+  "current-context": "test-user@development"
+}
+
+
+Develop a JSON PATH query to get all user names.
+
+
+
+$.users[*].name
+
+FINALLY;;;
+1. Get the needed object you want in a json data.
+2. use jsonpath.com an online evaluate to query and evaluate your expected output.
+3. Pass the output from the query to the kubectl utility to get the result from k8s objects as expected.
+
+
+k get pv --sort-by=.spec.capacity.storage > /opt/outputs/storage-capacity-sorted.txt
+
+
+REVISION:
+SCHEDULING
+
+Important:
+When you create a pod and add a command --command -- sleep 1000, if you have to use a dry run option, do it b4 the --command option b/c any thing after the command will be 
+regarded as an argument for the sleep command e.g
+k run staticpod --image=busybox --dry-run=client -o yaml --command -- sleep 1000 > staticpod.yaml
+
+https://kubernetes.io/blog/2017/03/advanced-scheduling-in-kubernetes/
+
+
+Important:
+
+Create a pod with the given specifications. By default it displays a blue background. Set the given command line arguments to change it to green.
+
+    Pod Name: webapp-green
+
+    Image: kodekloud/webapp-color
+
+    Command line arguments: --color=green
+
+
+	This means to to set the args --color and green on the pods... command line argument.
+	
+	
+Important: When you create role,clusterrole and its bindings on the cli, imperatively it will automatically includes the apigroups those resources belongs to and so you do not need to specify it.
+
+Better to set all securitycontext at the container level except otherwise stated...
+
+
+NETPOL:
+
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          name: internal
+    ports:
+    - port: 8080
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      name: payroll
+  policyTypes:
+  - Ingress
+status: {}
+
+Important: egress definition has to be to and ingress has to be from
+
+
+Important:
+Type create a persistent volume
+
+NB:
+
+
+The Storage Class called local-storage makes use of VolumeBindingMode set to WaitForFirstConsumer. 
+This will delay the binding and provisioning of a PersistentVolume until a Pod using the PersistentVolumeClaim is created.
+
