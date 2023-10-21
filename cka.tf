@@ -3330,7 +3330,7 @@ You'll get a parket sent....
  ip addr add 192.168.1.10/24 dev eth0 --> Used Assign or set ip address on the interfaces
  ip route or route ---> Used to view the door/routing table
  ip route add 192.168.1.0/24 via 192.168.2.1  --> Used to add entries to the routing tables or create a door 4 packets to travel
- cat /proc/sys/net/ipv4/ip_forward --> This file must be set to zero when using linux hosts as routers to enable packets to be sent through interfaces.
+ cat /proc/sys/net/ipv4/ip_forward --> This file must be set to one when using linux hosts as routers to enable packets to be sent through interfaces.
  
  
  # Enable IP packet forwarding temporarily
