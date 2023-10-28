@@ -3471,7 +3471,7 @@ cat >> /etc/hosts
 Now when you ping db, the ping goes through..
 
 The /etc/hosts file becomes the only source of truth for host A.
-But is it trully the only source of truth?? When you run hostname command on system B you get the result of node-02 but to system B its known as db.
+But is it trully the only source of truth?? When you run hostname command on system B you get the result of node-02 but to system A its known as db.
 We can even trick system A to think that system B is known as www.google.com
  e.g:
 cat >> /etc/hosts
@@ -4306,7 +4306,7 @@ IMPORTANT:
 	NB: cid = namespace, so you must use the name of the conatiner as the name of the namespace.
 	
 	Say you want to create your own network solution.. How do you know that container runtimes or orchestrators like k8s, rkt, mesos will support it?
-	That is where CNI comes in to pay. You must develop that solution using CNI standard for it to work with orchestrators that support CNI.
+	That is where CNI comes in to play. You must develop that solution using CNI standard for it to work with orchestrators that support CNI.
 	
 	CNI STANDARDS FOR CONTAINER RUNTIMES OR ORCHESTRATORS:
 	......................................................
@@ -5125,7 +5125,7 @@ replace with:
   [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
     SystemdCgroup = true
 
-
+	NB: remove the ... so you dont have error..
 	sudo apt-get install -y kubelet=1.27.0-00 kubeadm=1.27.0-00 kubectl=1.27.0-00
 	sudo apt-mark hold kubelet kubeadm 
 
@@ -5179,6 +5179,7 @@ https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-ku
 Note: In releases older than Debian 12 and Ubuntu 22.04, /etc/apt/keyrings does not exist by default; you can create it by running sudo mkdir -m 755 /etc/apt/keyrings
 
 3. initialize the cluster by running kubeadm init <args>
+kubeadm init --apiserver-advertise-address=10.0.72.124 --apiserver-cert-extra-sans=controlplane --pod-network-cidr=10.244.0.0/16
 
 4 join the worker node to the controlplan
 
@@ -5447,7 +5448,10 @@ run: k get nodes -o wide and use the nodes ip to ssh.
 
 ................................
 
-Network Troubleshooting
+Network Troubleshooting:
+///////////////////////
+
+
 Network Plugin in kubernetes:
 
 ——————–
@@ -5743,6 +5747,10 @@ All result of a json path document query are encapsulated within an array.
 meaning theyre encapsulated within a pair of square bracket.
 
 
+IQ:
+Which of the following statements is true?
+ANS:
+A. Dictionary is an unordered collection whereas list is an ordered collection.
 
 
 
@@ -6723,9 +6731,14 @@ merge the above as a single entry and pass it on as an option the kubectl utilit
 
 kubectl get nodes -o=jsonpath='{ranges .items[*]} {.metadata.name} {"\t"} {.status.capacity.cpu} {"\n"} {end}'
 
+
+
+
 JSONPATH WITH CUSTOM colums:
+---------------------------
 
 kubectl get nodes -o=custom-cloumns=<columname>:jasnpath
+It assumes for each item in the list.. You must remove the .items
 
 example:
 {
@@ -7217,3 +7230,154 @@ NB:
 The Storage Class called local-storage makes use of VolumeBindingMode set to WaitForFirstConsumer. 
 This will delay the binding and provisioning of a PersistentVolume until a Pod using the PersistentVolumeClaim is created.
 
+
+Question:
+We use container containerd as our container runtime. what is the interface/bridge created by container on this host..
+
+ip addr show type bridge
+
+This will show you all the bridge interface..
+
+.. Always use --help for a command not familiar with..
+
+
+To determine container runtime endpoint, you have to check the --container-runtime-endpoint option on the kubelet.
+This will also tell you the container runtime been used by the cluster..
+
+IQ:
+Identify which of the below plugins is not available in the list of available CNI plugins on this host?
+
+ls /opt/cni
+
+IQ
+What is the CNI plugin configured to be used on this kubernetes cluster?
+ls /etc/cni/net.d/
+
+
+IQ:
+If the requirement does not match any of the configured paths what service are the requests forwarded to?
+Default backend:  <default>
+NEEDS TO BE CONFIGURED...
+
+Annotations:  nginx.ingress.kubernetes.io/rewrite-target: /
+              nginx.ingress.kubernetes.io/ssl-redirect: false
+			  
+			  
+		EXAM:	  
+			  
+KUBELET ISSUE:
+journalctl -u kubelet --no-pager 
+journalctl -u kubelet 
+journalctl -u kubelet --no-pager  | grep -i error
+
+.....
+
+ k logs  -n kube-system kube-proxy-bjgxt 
+E1021 02:13:25.687717       1 run.go:74] "command failed" err="failed complete: failed to decode: no kind \"Config\" is registered for version \"v1\" in scheme \"pkg/proxy/apis/config/scheme/scheme.go:29\""
+
+THIS ISSUE WAS FROM THE KUBE PROXY KUBECONFIG FILE, THE FILE WAS PASSED AS KUBECONFIG IN THE KUBEPROXY CM BUT WAS PASSED AS CONFIG AS OPTION IN THE CONTAINER.
+ALSO THE RIGHT URL WASNT CORRECT OR CONSISTENT BW THE ONE IN THE CONTAINER AND THE ONE MOUNTED AS CM..
+
+
+kubectl get deploy -n admin | jq -c paths
+https://www.youtube.com/watch?v=EDuYmvzgPFc
+
+k get no -o wide --kubeconfig=admin000.conf
+k cluster-info --kubeconfig /cka/admin99777.conf
+
+LINUX:
+
+1. 1,$d --> delete everything in a vi. -- no insert
+2. dd --> delete a specific line in a vi, move the cursor to the said line... no insert
+
+test coonectivity:
+
+k run curl --image=alpine/curl --rm -it -- sh
+
+
+
+SOLUTIONS:
+
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: orange-stc-cka07-str
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: orange-pv-cka07-str
+spec:
+  capacity:
+    storage: 150Mi
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: orange-stc-cka07-str
+  local:
+    path: /opt/orange-data-cka07-str
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - cluster1-controlplane
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: orange-pvc-cka07-str
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: orange-stc-cka07-str
+  volumeName: orange-pv-cka07-str
+  resources:
+    requests:
+      storage: 128Mi
+
+	  .....
+	  
+	  kubectl rollout history deployment -n test-wl08 trace-wl08 --revision=2
+	  
+	  kubectl rollout history deployment -n test-wl08 trace-wl08 
+	  kubectl get deploy -n test-wl08
+	  .................
+	  
+	  kubectl get event --field-selector involvedObject.name=blue-dp-cka09-trb-xxxxx
+	  
+	  initContainers:
+	    - command:
+	      - sh
+	      - -c
+	      - echo 'Welcome!'
+		  
+		  when the logs,describe does no t show use events
+		  
+		  
+		  OBSERVATIONS:
+		  
+		  When you modify a secret/configmap for a pod.
+		  You should delete the pod and recreate it for the update to take effect except theyre mounted as a volume..
+		  
+		  
+		  journalctl -u kubelet -f | grep -v 'connect: connection refused'
+		  
+		  When requred to add a volumename to a pvc do it..
+		  
+		  issue:
+		  When you issue that the kubelet is not mounting to a volume that was specified in form of a file...
+		  You should add a subpath with that path that it tells u is not a directory..
+		  
+		  When youve checked the labels of the pods matches that of the svc and still no endpoint and you where told not to modify the svc.. You can delete the pod and recreate it..
+		  Even when you do this and it does not work replace the label, even if it is the same their might be typo.. replace the pod with the same label and it will work...
+		  
+		  ...
+		  Connection the etcd can be refused if the wrong port is used in the livness.
+		  if the volumemounts name and the volume names does not match
