@@ -2036,9 +2036,9 @@ This link tells you all you need about the kubeconfig --; https://kubernetes.io/
 							   
 							   
 							   ---sample role
-							   # Please edit the object below. Lines beginning with a '#' will be ignored,
-							   # and an empty file will abort the edit. If an error occurs while saving this file will be
-							   # reopened with the relevant failures.
+ # Please edit the object below. Lines beginning with a '#' will be ignored,
+# and an empty file will abort the edit. If an error occurs while saving this file will be
+ # reopened with the relevant failures.
 							   #
 							   apiVersion: rbac.authorization.k8s.io/v1
 							   kind: Role
@@ -2127,35 +2127,36 @@ This link tells you all you need about the kubeconfig --; https://kubernetes.io/
 								     apiGroup: rbac.authorization.k8s.io
 									 
 									 
+
 									 VERY VERY IMPORTANT:
-									 As you know, there are certain groups that exists in the kubernetes cluster and examples of such groups include system:masters.
-									 Note that once you create a key and csr for a user and sign that CSR using the CA key and CAcert to get the user authenticated to the cluster.
-									 If in creating the csr you added the user to OU system:masters, and when granting authorization to the user using RBAC, 
-									 you create a clusterrole say to create, delete, get pods and deployments
-									 and binds its using clusterrolebinding and in the subject you specify kind as Group and name as system:masters b/c 
-									 that user was added to the group system:masters when generating the 
-									 csr will he/she inherite the clusterrole associated to that group system:masters???
+As you know, there are certain groups that exists in the kubernetes cluster and examples of such groups include system:masters.
+Note that once you create a key and csr for a user and sign that CSR using the CA key and CAcert to get the user authenticated to the cluster.
+If in creating the csr you added the user to OU system:masters, and when granting authorization to the user using RBAC, 
+you create a clusterrole say to create, delete, get pods and deployments
+and binds its using clusterrolebinding and in the subject you specify kind as Group and name as system:masters b/c 
+that user was added to the group system:masters when generating the 
+csr will he/she inherite the clusterrole associated to that group system:masters???
 									 
-									 Can we also add a user to a non existing OU in kubernetes when generating CSR for authentication and use that group while creating RBAC to grant permission?? 
-									 The answer is YES..
+Can we also add a user to a non existing OU in kubernetes when generating CSR for authentication and use that group while creating RBAC to grant permission?? 
+The answer is YES..
 									 
 									 
-									 SOLUTION:
+ SOLUTION:
 									 
-									 In Kubernetes, adding a user to the `system:masters` group during the creation of a certificate signing request (CSR) and then binding that group to a ClusterRole using
-									  a ClusterRoleBinding will grant the user the permissions associated with that ClusterRole. So, in your scenario:
+In Kubernetes, adding a user to the `system:masters` group during the creation of a certificate signing request (CSR) and then binding that group to a ClusterRole using
+a ClusterRoleBinding will grant the user the permissions associated with that ClusterRole. So, in your scenario:
 
-									 1. You create a user and generate a CSR.
-									 2. During CSR creation, you add the user to the `OU system:masters`.
-									 3. You sign the CSR using the CA key and CA certificate to authenticate the user to the cluster.
-									 4. You create a ClusterRole that allows actions like creating, deleting, getting pods and deployments.
-									 5. You create a ClusterRoleBinding that binds the `system:masters` group to the ClusterRole.
+ 1. You create a user and generate a CSR.
+2. During CSR creation, you add the user to the `OU system:masters`.
+3. You sign the CSR using the CA key and CA certificate to authenticate the user to the cluster.
+4. You create a ClusterRole that allows actions like creating, deleting, getting pods and deployments.
+5. You create a ClusterRoleBinding that binds the `system:masters` group to the ClusterRole.
 
-									 In this case, the user, because they are part of the `system:masters` group, will inherit the permissions associated with the ClusterRole. 
-									 This is because Kubernetes RBAC allows you to grant permissions to groups just like you would to individual users. By binding the `system:masters` group to the ClusterRole, 
-									 any user who is part of that group will have the permissions defined in the ClusterRole.
+In this case, the user, because they are part of the `system:masters` group, will inherit the permissions associated with the ClusterRole. 
+This is because Kubernetes RBAC allows you to grant permissions to groups just like you would to individual users. By binding the `system:masters` group to the ClusterRole, 
+any user who is part of that group will have the permissions defined in the ClusterRole.
 
-									 Here's an example of what the ClusterRole and ClusterRoleBinding might look like in YAML:
+Here's an example of what the ClusterRole and ClusterRoleBinding might look like in YAML:
 
 									 ```yaml
 									 apiVersion: rbac.authorization.k8s.io/v1
@@ -7381,3 +7382,282 @@ spec:
 		  ...
 		  Connection the etcd can be refused if the wrong port is used in the livness.
 		  if the volumemounts name and the volume names does not match
+		  
+		  
+		  ,............
+		  
+,. Normal  ScalingReplicaSet  67s   deployment-controller  Scaled up replica set black-cka25-trb-74b777bb68 to 1
+
+student-node ~ ➜  k logs black-cka25-trb-74b777bb68-nqndq 
+
+student-node ~ ➜  kubectl rollout status deployment/black-cka25-trb
+Waiting for deployment "black-cka25-trb" rollout to finish: 0 out of 1 new replicas have been updated...
+^C
+student-node ~ ✖ kubectl rollout history deployment/black-cka25-trb
+deployment.apps/black-cka25-trb 
+REVISION  CHANGE-CAUSE
+1         <none>
+
+
+student-node ~ ➜  kubectl rollout history  deployment/black-cka25-trb --revision=1
+deployment.apps/black-cka25-trb with revision #1
+Pod Template:
+  Labels:       app=black-cka25-trb
+        pod-template-hash=74b777bb68
+  Containers:
+   nginx-container-cka25-trb:
+    Image:      nginx:1.14.2
+    Port:       80/TCP
+    Host Port:  0/TCP
+    Environment:        <none>
+    Mounts:     <none>
+  Volumes:      <none>
+  ..........................
+
+student-node ~ ➜  kubectl rollout undo  deployment/black-cka25-trb --revision=1
+Error: unknown flag: --revision
+See 'kubectl rollout undo --help' for usage.
+
+student-node ~ ✖ kubectl rollout undo  deployment/black-cka25-trb 
+error: no rollout history found for deployment "black-cka25-trb"
+
+student-node ~ ✖ kubectl rollout undo  deployment/black-cka25-trb 
+error: no rollout history found for deployment "black-cka25-trb"
+
+student-node ~ ✖ kubectl rollout undo deployment/black-cka25-trb --to-revision=1
+error: you cannot rollback a paused deployment; resume it first with 'kubectl rollout resume deployment/black-cka25-trb' and try again
+
+student-node ~ ✖ kubectl rollout resume deployment/black-cka25-trb 
+deployment.apps/black-cka25-trb resumed
+
+student-node ~ ➜  k get deploy
+NAME              READY   UP-TO-DATE   AVAILABLE   AGE
+black-cka25-trb   1/1     1            1           7m54s
+......................
+
+
+For this question, please set the context to cluster1 by running:
+
+kubectl config use-context cluster1
+
+
+It appears that the black-cka25-trb deployment in cluster1 isn't up to date. While listing the deployments, we are currently seeing 0 under the UP-TO-DATE section for this deployment. Troubleshoot, fix and make sure that this deployment is up to date.
+
+    Issue fixed?
+
+    Pods of the deployment is up-to-date?
+	
+	ISSUE:
+k auth can-i get namespaces --as system:serviceaccount:default:green-sa-cka22-arch
+
+Important:
+We do not need to give a logical address to the switch b/c it belongs to the datalink layer..
+COMMAND FOR CONFIGURING THE ROUTER.. TO COMM BW 2 NETWORKS..
+
+Would you like to initiate configuration dialogue?
+say no, and click enter.
+This will log you in to a router dialog box.
+
+1. type enable and click enter
+2. type configure and click enter
+3.  a box will pop up with a question just click enter.....
+4. interface gigabitEthernet 0/0 --> This means you want to configure this interface
+
+g)#interface gigabitEthernet 0/0
+Router(config-if)#ip a
+Router(config-if)#ip add
+Router(config-if)#ip address 192.168.1.1
+% Incomplete command.
+Router(config-if)#ip address 192.168.1.1 255.255.255.0
+
+NOW We have to configure the router by assigning the first useable ip from the first network to it interface. say we have eth0 or interface G0/0 which should be a gateway for network of 
+192.168.1.0, we will assign the first useable ip from this network to the interface... and do the same for the second network..
+
+Example as above..
+Bring up the interface by running.
+
+no shutdown.
+ig-if)#no shutdown
+
+Router(config-if)#
+%LINK-5-CHANGED: Interface GigabitEthernet0/0, changed state to up
+
+%LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet0/0, changed state to up
+
+Done??
+exit and configure the second interface..
+
+Finally, add a gateway to the devices in the network 192.168.1.0 to use the ip address assigned to your gateway interface at g0/0.
+Also do the same for the second one..
+
+......
+CHAT
+If you're looking to configure a router to connect two networks and provide them with gateway access. 
+Here are the steps you've outlined and a few additional details to help guide you through the configuration:
+
+Assuming you are in the router's configuration mode:
+
+1. **Enable the Configuration Mode:**
+
+    ```plaintext
+    router> enable
+    ```
+
+2. **Enter Configuration Mode:**
+
+    ```plaintext
+    router# configure terminal
+    ```
+
+3. **Configure the First Interface (GigabitEthernet0/0) for the First Network (e.g., 192.168.1.0/24):**
+
+    ```plaintext
+    router(config)# interface GigabitEthernet0/0
+    router(config-if)# ip address 192.168.1.1 255.255.255.0
+    router(config-if)# no shutdown
+    ```
+
+    The `ip address` command assigns the router an IP address within the first network (e.g., 192.168.1.1) with a subnet mask of 255.255.255.0.
+
+4. **Configure the Second Interface (GigabitEthernet0/1) for the Second Network:**
+
+    If you have a second network, repeat the steps for the second interface. For example:
+
+    ```plaintext
+    router(config)# interface GigabitEthernet0/1
+    router(config-if)# ip address 192.168.2.1 255.255.255.0
+    router(config-if)# no shutdown
+    ```
+
+    This sets up the second interface (e.g., GigabitEthernet0/1) with an IP address in the second network (e.g., 192.168.2.1).
+
+5. **Exit Configuration Mode:**
+
+    ```plaintext
+    router(config-if)# exit
+    router(config)# exit
+    ```
+
+6. **Configure Gateway for Devices:**
+
+    For devices in the network 192.168.1.0/24 to use the router as a gateway, you need to configure their default gateway to be the IP address assigned to GigabitEthernet0/0 (e.g., 192.168.1.1).
+
+    Similarly, for devices in the second network, set their default gateway to be the IP address assigned to GigabitEthernet0/1 (e.g., 192.168.2.1).
+
+That's it! You've now configured your router to connect two networks and provided them with gateway access. Devices in these networks can communicate with each other via the router. 
+Just make sure to configure the gateway on devices accordingly.
+
+...........
+
+To query the Kubernetes api from the pod, using a service account.
+1. Create a service account
+2. Create a pod and associate that service account to the pods.
+3 Describe the pod, you'll see where the service account is mounted as a volume.
+e.g /var/run/secrets/kubernetes.io/serviceaccount 
+
+4 exec into the pods using kubectl exec <podname> -- sh
+Querying the Kubernetes api from the pod..
+
+ls /var/run/secrets/kubernetes.io/serviceaccount, you will see ca.crt, namespace and token created by the token request api when the pod was created.
+Remember you assigned your serviceaccount to this pod...
+Depending on the k8s api or service you want to query, you have to grant the service account the right permission. using RBAC.
+say you want to run a query to get secrets, then you should create a role/clusterrole and its bindings that will enable that service account perform such task.
+Now lets run the commands to query the Kubernetes api.
+Know that for you to access any resources in the cluster, say pods to pod comm and others, you do this via their services..
+
+We set some variables for insecure communication.
+
+TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token) 
+to curl you need the k8s service, which is kubernetes, note the cat was used in the command to provide the token to the variable TOKEN
+
+curl -k https://kubernetes.default.svc.cluster.local/api --header "Authorization: Bearer ${TOKEN}"
+curl -k https://kubernetes.default./api -H "Authorization: Bearer ${TOKEN}"
+
+To list or get secrets if you have the permission...
+
+curl -k https://kubernetes.default/api/v1/secrets -H "Authorization: Bearer ${TOKEN}"
+...................................
+
+To interact or with the Kubernetes api listing secrets using https or secure connection.
+1. set the ca.crt as variable in the pod.
+
+CACERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+
+curl --cacert $CACERT  https://kubernetes.default/api/v1/secrets -H "Authorization: Bearer ${TOKEN}"
+
+-------------------------------
+
+
+FROMGPT:
+You've outlined a step-by-step process for querying the Kubernetes API from within a pod using a service account. 
+This is a common and secure practice to access cluster resources and perform various operations. Here's a summary of the steps and the commands involved:
+
+**Step 1: Create a Service Account**
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: my-service-account
+```
+
+**Step 2: Create a Pod with the Service Account**
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  serviceAccountName: my-service-account
+  containers:
+  - name: my-container
+    image: nginx:latest
+```
+
+**Step 3: Describe the Pod**
+```bash
+kubectl describe pod my-pod
+```
+You'll see where the service account is mounted as a volume at `/var/run/secrets/kubernetes.io/serviceaccount`.
+
+**Step 4: Execute a Shell Inside the Pod**
+```bash
+kubectl exec my-pod -- sh
+```
+
+**Querying the Kubernetes API from the Pod:**
+
+To access the Kubernetes API from within the pod using the service account, you can set environment variables and use `curl`:
+
+- Get the Token:
+```bash
+TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+```
+
+- To access the API server:
+```bash
+curl -k https://kubernetes.default.svc.cluster.local/api --header "Authorization: Bearer ${TOKEN}"
+```
+or
+```bash
+curl -k https://kubernetes.default/api --header "Authorization: Bearer ${TOKEN}"
+```
+
+- To list or get secrets with proper permissions:
+```bash
+curl -k https://kubernetes.default/api/v1/secrets --header "Authorization: Bearer ${TOKEN}"
+```
+
+**To Interact with the Kubernetes API Over a Secure Connection:**
+
+- Set the ca.crt as a variable in the pod:
+```bash
+CACERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+```
+
+- Use `curl` with the `--cacert` option for secure communication:
+```bash
+curl --cacert $CACERT https://kubernetes.default/api/v1/secrets --header "Authorization: Bearer ${TOKEN}"
+```
+
+This approach allows you to securely interact with the Kubernetes API and perform various tasks, 
+including listing secrets and accessing other resources, while ensuring proper authentication and authorization using the service account.
