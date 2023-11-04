@@ -1674,7 +1674,7 @@ Kubernetes has a certificate API, with certificate api you can send csr to the C
 						 
 Process: 
 The new user generates a set of keys, create a csr and send the csr to me the admin user.
-The admin user creates a CertificateSingingRequest object. In this CSR object, the details of the new users csr is enterred into it.
+The admin user creates a CertificateSingingRequest object. In this CSR object, the details of the new users csr is entered into it.
 Things like the encoded csr.
 						 
  Example:
@@ -7563,7 +7563,7 @@ Remember you assigned your serviceaccount to this pod...
 Depending on the k8s api or service you want to query, you have to grant the service account the right permission. using RBAC.
 say you want to run a query to get secrets, then you should create a role/clusterrole and its bindings that will enable that service account perform such task.
 Now lets run the commands to query the Kubernetes api.
-Know that for you to access any resources in the cluster, say pods to pod comm and others, you do this via their services..
+Know that for you to access any resources in the cluster, say pods to pod communication and others, you do this via their services..
 
 We set some variables for insecure communication.
 
@@ -7661,3 +7661,10 @@ curl --cacert $CACERT https://kubernetes.default/api/v1/secrets --header "Author
 
 This approach allows you to securely interact with the Kubernetes API and perform various tasks, 
 including listing secrets and accessing other resources, while ensuring proper authentication and authorization using the service account.
+
+COMMNADS:
+
+kubectl top pods -A --context cluster2 --no-headers | sort -nr -k4 | head -1
+
+k get all  --no-headers -l env=prod --no-headers | wc -l
+
