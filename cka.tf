@@ -7667,4 +7667,166 @@ COMMNADS:
 kubectl top pods -A --context cluster2 --no-headers | sort -nr -k4 | head -1
 
 k get all  --no-headers -l env=prod --no-headers | wc -l
+....
 
+KUBELET
+...........
+
+The ca.crt certificate that all component must have say for the kubelet is store at 
+1. /etc/kubernetes/pki/ca.crt
+  
+2. The kubelet kubeconfig file used to authenticate to the kube-apiserver is located at
+
+ /etc/kubernetes/kubelet.conf
+ 
+
+3. The kubelet client and server certificate is located at
+  /var/lib/kubelet/pki
+  
+ 4. The kubelet config file for the nodes is located at.
+   /var/lib/kubelet/config.yaml
+   
+   ------
+   ISSUE:
+
+   Normal   Pulled     35s                kubelet            Successfully pulled image "nginx:latest" in 331.074248ms
+   Normal   Pulling    21s (x3 over 41s)  kubelet            Pulling image "nginx:latest"
+   Normal   Created    21s (x3 over 36s)  kubelet            Created container nginx-container
+   Warning  Failed     21s (x3 over 36s)  kubelet            Error: failed to create containerd task: 
+   failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during 
+   container init: error mounting "/var/lib/kubelet/pods/f560385c-8136-488f-a96e-4b97b5949988/volumes/kubernetes.io~configmap/nginx-config"
+    to rootfs at "/etc/nginx/nginx.conf": mount /var/lib/kubelet/pods/f560385c-8136-488f-a96e-4b97b5949988/volumes/kubernetes.io~configmap/nginx-config:/etc/nginx/nginx.conf
+	 (via /proc/self/fd/6), flags: 0x5001: not a direc
+	 
+	 Give the volumeMounts a subPath: This will solve the issue...
+	 
+	 
+	 ........
+	 
+	 k get pod -A --sort-by=.metadata.creationTimestamp ----> desending order
+	 k get pod -A --sort-by=.metadata.creationTimestamp | tac  ----> asending order OR
+	 k get pod -A --sort-by=.metadata.creationTimestamp -r
+	 
+	 
+	 ..........
+	 
+	 Init Containers:
+	 
+	 When you create a pod of 2 containers, a main container and an init container..
+	 A senario say to clone git repo using an init container.
+	  That clone repo will be available in the root directory of the main container volumeMounts once cloned by the initcontainer.
+	  e.g
+	  
+	  apiVersion: v1
+	  kind: Pod
+	  metadata:
+	    creationTimestamp: null
+	    labels:
+	      run: nginx-k8s
+	    name: nginx-k8s
+	  spec:
+	    volumes:
+	    - name: data
+	      emptyDir: {}
+	    initContainers:
+	    - name: git-k8s
+	      image: alpine/git
+	      command:
+	      - sh
+	      - "-c"
+	      - git clone https://github.com/jhawithu/k8s-nginx /workdir
+	      volumeMounts:
+	      - name: data
+	        mountPath: /workdir
+	    containers:
+	    - image: nginx
+	      name: nginx-k8s
+	      volumeMounts:
+	      - name: data
+	        mountPath: "usr/share/nginx/html"
+			
+	
+			when you exec into the created pod, whatever that was cloned by the initcontainer will be made available in the /usr/share/nginx/html of the main container..
+			
+			
+--- 
+
+IQ:
+
+For this question, please set the context to cluster1 by running:
+
+kubectl config use-context cluster1
+
+
+
+A storage class called coconut-stc-cka01-str was created earlier.
+
+
+Use this storage class to create a persistent volume called coconut-pv-cka01-str as per below requirements:
+
+
+- Capacity should be 100Mi.
+
+- The volume type should be hostpath and the path should be /opt/coconut-stc-cka01-str.
+
+- Use coconut-stc-cka01-str storage class.
+
+- This volume must be created on cluster1-node01 (the /opt/coconut-stc-cka01-str directory already exists on this node).
+
+- It must have a label with key: storage-tier with value: gold.
+
+
+Also create a persistent volume claim with the name coconut-pvc-cka01-str as per below specs:
+
+
+- Request 50Mi of storage from coconut-pv-cka01-str PV, it must use matchLabels to use the PV.
+
+- Use coconut-stc-cka01-str storage class.
+
+- The access mode must be ReadWriteMany.
+
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: coconut-pv-cka01-str
+  labels:
+    storage-tier: gold
+spec:
+  capacity:
+    storage: 100Mi
+  accessModes:
+    - ReadWriteMany
+  storageClassName: coconut-stc-cka01-str
+  hostPath:
+    path: /opt/coconut-stc-cka01-str
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - cluster1-node01
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: coconut-pvc-cka01-str
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Mi
+  storageClassName: coconut-stc-cka01-str
+  volumeName: coconut-pv-cka01-str
+  selector:
+    matchLabels:
+      storage-tier: "gold"
+    matchExpressions:
+      - {key: node, operator: In, values: [cluster1-node01]}
+	 
+	 
+	 
+ 
