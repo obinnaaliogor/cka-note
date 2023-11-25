@@ -7359,7 +7359,7 @@ spec:
 	      - -c
 	      - echo 'Welcome!'
 		  
-		  when the logs,describe does no t show use events
+		  when the logs,describe does no show anything use events
 		  
 		  
 		  OBSERVATIONS:
@@ -7373,8 +7373,8 @@ spec:
 		  When requred to add a volumename to a pvc do it..
 		  
 		  issue:
-		  When you issue that the kubelet is not mounting to a volume that was specified in form of a file...
-		  You should add a subpath with that path that it tells u is not a directory..
+		  When you have issue that the kubelet is not mounting to a volume that was specified in form of a file...
+		  You should add a subPath with that path that it tells u is not a directory..
 		  
 		  When youve checked the labels of the pods matches that of the svc and still no endpoint and you where told not to modify the svc.. You can delete the pod and recreate it..
 		  Even when you do this and it does not work replace the label, even if it is the same their might be typo.. replace the pod with the same label and it will work...
@@ -7827,6 +7827,15 @@ spec:
     matchExpressions:
       - {key: node, operator: In, values: [cluster1-node01]}
 	 
+	 
+	 
+.
+command to create pods
+
+for i in {1..20}; do
+   kubectl exec --namespace=kube-public curl -- sh -c 'test=`wget -qO- -T 2  http://webapp-service.default.svc.cluster.local:8080/ready 2>&1` && echo "$test OK" || echo "Failed"';
+   echo ""
+done
 	 
 	 
  
